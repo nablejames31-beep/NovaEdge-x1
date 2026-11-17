@@ -13,7 +13,14 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { ShaderMount, meshGradientFragmentShader, getShaderColorFromString, ShaderFitOptions } from '@paper-design/shaders';
+import {
+  ShaderMount,
+  meshGradientFragmentShader,
+  godRaysFragmentShader,
+  getShaderColorFromString,
+  getShaderNoiseTexture,
+  ShaderFitOptions,
+} from '@paper-design/shaders';
 
 import { createStage } from './scene.js';
 import { buildPhone, smoothstep } from './phone.js';
@@ -45,10 +52,10 @@ function mountBackdrop() {
       el,
       meshGradientFragmentShader,
       {
-        u_colors: ['#08090c', '#0b0d12', '#10141c', '#0a1a2c', '#08090c'].map(getShaderColorFromString),
+        u_colors: ['#05060a', '#0a1634', '#0c2c63', '#120c33', '#06080e'].map(getShaderColorFromString),
         u_colorsCount: 5,
-        u_distortion: 0.8,
-        u_swirl: 0.2,
+        u_distortion: 0.9,
+        u_swirl: 0.35,
         u_grainMixer: 0,
         u_grainOverlay: 0.06,
         u_fit: ShaderFitOptions.cover,
@@ -587,6 +594,140 @@ async function init() {
     cursorEl.classList.toggle('hot', !!(e.target.closest && e.target.closest('button, a, .tag, .swatch')));
   });
 
+  // ═══ wow layer ═══
+  // god rays behind the phone (Paper Shaders)
+  let raysMount = null;
+  const raysEl = $('#rays');
+  (async () => {
+    try {
+      const noise = getShaderNoiseTexture();
+      if (noise && !noise.complete) await noise.decode().catch(() => {});
+      raysMount = new ShaderMount(
+        raysEl,
+        godRaysFragmentShader,
+        {
+          u_colorBack: [0, 0, 0, 0],
+          u_colorBloom: getShaderColorFromString('#2ea8ff'),
+          u_colors: ['#2ea8ff', '#cfe8ff', '#4a55ff', '#ffffff'].map(getShaderColorFromString),
+          u_colorsCount: 4,
+          u_bloom: 0.3,
+          u_intensity: 0.42,
+          u_density: 0.32,
+          u_spotty: 0.28,
+          u_midSize: 0.22,
+          u_midIntensity: 0.3,
+          u_noiseTexture: noise,
+          u_fit: ShaderFitOptions.cover,
+          u_scale: 1,
+          u_rotation: 0,
+          u_originX: 0.5,
+          u_originY: 0.5,
+          u_offsetX: 0,
+          u_offsetY: 0,
+          u_worldWidth: 0,
+          u_worldHeight: 0,
+        },
+        { alpha: true, premultipliedAlpha: true },
+        reduceMotion ? 0 : 0.35,
+        0,
+        1,
+        1400 * 1400,
+      );
+    } catch (e) {
+      console.warn('God rays unavailable', e);
+    }
+  })();
+  // how strong the rays are per section (hero, colors and the finale shine the most)
+  const RAYS = [0.7, 0.35, 0.1, 0.06, 0.06, 0.06, 0.06, 0.35, 0.5, 0.15, 0.75];
+  const raysAt = (tt) => {
+    const i = Math.floor(tt);
+    const f = tt - i;
+    const a = RAYS[clamp(i, 0, RAYS.length - 1)];
+    const b = RAYS[clamp(i + 1, 0, RAYS.length - 1)];
+    return a + (b - a) * f;
+  };
+
+  // drifting color aura
+  const auraBlobs = $$('#aura i');
+
+  // text scramble on kickers (motion-primitives style)
+  const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&*+';
+  function scramble(el) {
+    if (reduceMotion) return;
+    const final = el.dataset.text || (el.dataset.text = el.textContent);
+    const o = { p: 0 };
+    gsap.to(o, {
+      p: 1,
+      duration: 0.9,
+      ease: 'none',
+      overwrite: true,
+      onUpdate: () => {
+        const n = Math.floor(o.p * final.length);
+        let out = final.slice(0, n);
+        for (let k = n; k < final.length; k++) out += final[k] === ' ' ? ' ' : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+        el.textContent = out;
+      },
+      onComplete: () => (el.textContent = final),
+    });
+  }
+
+  // spotlight: cards light up where the cursor is
+  if (finePointer) {
+    document.addEventListener('pointermove', (e) => {
+      const card = e.target.closest && e.target.closest('.spot, .spec-card');
+      if (!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--mx', `${e.clientX - r.left}px`);
+      card.style.setProperty('--my', `${e.clientY - r.top}px`);
+    });
+  }
+
+  // cursor light trail (cursify / canvas-ui style)
+  const trail = $('#trail');
+  const tctx = trail.getContext('2d');
+  const trailPts = [];
+  let trailOn = finePointer && !reduceMotion;
+  if (trailOn) trail.classList.add('on');
+  function sizeTrail() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    trail.width = innerWidth * dpr;
+    trail.height = innerHeight * dpr;
+    tctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  sizeTrail();
+  window.addEventListener('resize', sizeTrail);
+  window.addEventListener('pointermove', (e) => {
+    if (!trailOn || e.pointerType !== 'mouse') return;
+    trailPts.push({ x: e.clientX, y: e.clientY, life: 1 });
+    if (trailPts.length > 40) trailPts.shift();
+  });
+  function drawTrail() {
+    if (!trailOn) return;
+    tctx.clearRect(0, 0, innerWidth, innerHeight);
+    tctx.globalCompositeOperation = 'lighter';
+    for (let k = trailPts.length - 1; k >= 0; k--) {
+      const p = trailPts[k];
+      p.life -= 0.035;
+      if (p.life <= 0) {
+        trailPts.splice(k, 1);
+        continue;
+      }
+      const r = 18 * p.life;
+      const g = tctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, `rgba(120, 200, 255, ${0.35 * p.life})`);
+      g.addColorStop(1, 'rgba(46, 168, 255, 0)');
+      tctx.fillStyle = g;
+      tctx.beginPath();
+      tctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      tctx.fill();
+    }
+  }
+
+  // marquee reacts to scroll speed (skews + speeds up)
+  const marqueeTrack = $('.marquee-track');
+  let marqueeSkew = 0;
+  const phoneScreen = new THREE.Vector3();
+
   const tooltip = $('#tooltip');
   const tooltipName = $('strong', tooltip);
   const hoverW = Object.fromEntries(Object.keys(PARTS).map((k) => [k, 0]));
@@ -595,6 +736,7 @@ async function init() {
   // ── section moments (play when a section reaches the middle of the screen) ──
   function onEnter(i) {
     countUp(sections[i]);
+    $$('[data-scramble]', sections[i]).forEach(scramble);
     const chars = splits.get(i);
     if (chars) {
       gsap.fromTo(chars, { yPercent: 70, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.8, stagger: 0.014, ease: 'power3.out', overwrite: true });
@@ -742,6 +884,29 @@ async function init() {
         }
       }
     });
+
+    // god rays sit right behind the phone on screen
+    phoneScreen.set(0, 0, 0);
+    phone.root.localToWorld(phoneScreen);
+    phoneScreen.project(stage.camera);
+    const rx = (phoneScreen.x * 0.5 + 0.5) * W;
+    const ry = (-phoneScreen.y * 0.5 + 0.5) * H;
+    raysEl.style.transform = `translate3d(${rx.toFixed(1)}px, ${ry.toFixed(1)}px, 0)`;
+    raysEl.style.opacity = (raysAt(tt) * calm).toFixed(3);
+
+    // aura blobs drift with scroll + time (depth)
+    auraBlobs.forEach((b, k) => {
+      const ph = tt * (0.6 + k * 0.25) + t * 0.05 * (k + 1);
+      b.style.transform = `translate3d(${(Math.sin(ph) * 12).toFixed(2)}vw, ${(Math.cos(ph * 0.8) * 10 - tt * 2).toFixed(2)}vh, 0)`;
+    });
+
+    drawTrail();
+
+    // marquee skews with scroll velocity
+    if (marqueeTrack) {
+      marqueeSkew += (clamp(lenis.velocity * -0.6, -14, 14) - marqueeSkew) * 0.12;
+      marqueeTrack.parentElement.style.transform = `skewX(${marqueeSkew.toFixed(2)}deg)`;
+    }
 
     // nav: progress hairline + active section
     navProgress.style.transform = `scaleX(${clamp(lenis.scroll / (lenis.limit || 1), 0, 1)})`;
