@@ -1977,3 +1977,20 @@ html {
 body {
   background: transparent !important;
 }
+
+/* no visible scrollbars: the page still scrolls smoothly (wheel, trackpad, touch, keys),
+   and nothing may spill sideways (marquee / ghost numerals / aura are clipped) */
+html,
+body {
+  overflow-x: clip;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* old Edge */
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none; /* Chrome, Edge, Safari, Brave */
+}
+#track,
+.section {
+  overflow-x: clip;
+}
