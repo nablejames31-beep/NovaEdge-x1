@@ -60,6 +60,7 @@ function buildBackdrop() {
     }),
   );
   wall.position.z = -30;
+  wall.visible = false; // replaced by the Paper mesh-gradient backdrop (DOM layer)
   group.add(wall);
 
   // star / dust particles
@@ -114,13 +115,15 @@ function buildBackdrop() {
 }
 
 export function createStage(canvas) {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance' });
+  // alpha: the animated Paper shader backdrop shows through behind the 3D scene
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, premultipliedAlpha: true, powerPreference: 'high-performance' });
+  renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.0;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(PALETTE.navy);
+  scene.background = null;
   scene.environment = buildEnvironment(renderer);
   scene.environmentIntensity = 1.0;
 
@@ -148,6 +151,27 @@ export function createStage(canvas) {
   // pivot = floating / parallax wrapper around the phone
   const pivot = new THREE.Group();
   scene.add(pivot);
+
+  // soft contact shadow under the floating phone → depth
+  const shadowTex = (() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 256;
+    const x = c.getContext('2d');
+    const g = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, 'rgba(0,0,0,0.85)');
+    g.addColorStop(0.45, 'rgba(0,0,0,0.35)');
+    g.addColorStop(1, 'rgba(0,0,0,0)');
+    x.fillStyle = g;
+    x.fillRect(0, 0, 256, 256);
+    return new THREE.CanvasTexture(c);
+  })();
+  const shadow = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.4, 1.1),
+    new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false, opacity: 0.7 }),
+  );
+  shadow.rotation.x = -Math.PI / 2;
+  shadow.position.y = -2.35;
+  scene.add(shadow);
 
   // glow + halo ring behind the phone (final scene)
   const glowTex = glowTexture();
@@ -241,25 +265,36 @@ export function createStage(canvas) {
       target.lerp(inspect.target, k);
       dist = lerp(dist, inspect.dist * (portrait ? 1.9 : 1), k);
     }
-    camera.position.copy(target).addScaledVector(dir, dist);
-    camera.lookAt(target);
+    if (!inspect.orbiting) {
+      camera.position.copy(target).addScaledVector(dir, dist);
+      camera.lookAt(target);
+    }
+    applyViewOffset(state, k, portrait);
+    updateBackdrop(state, t, k);
+  }
 
-    // keep the subject beside the text (desktop) or above it (phones);
-    // while inspecting, keep it beside / above the info panel instead
-    const panelW = Math.min(420, width * 0.92);
+  // keep the subject beside the text (desktop) or above it (phones);
+  // while inspecting, keep it beside / above the info panel instead
+  function applyViewOffset(state, k, portrait) {
+    const panelW = Math.min(440, width * 0.92);
     let xOff = portrait ? 0 : -state.shift * 0.2 * width;
     let yOff = portrait ? (0.16 + state.lift * 0.04) * height : state.lift * 0.135 * height;
     xOff = lerp(xOff, portrait ? 0 : panelW * 0.5, k);
     yOff = lerp(yOff, portrait ? 0.3 * height : 0, k);
     camera.setViewOffset(width, height, xOff, yOff, width, height);
+  }
 
+  function updateBackdrop(state, t, k) {
     // background life
+    shadow.material.opacity = 0.7 * (1 - state.explode) * (1 - state.zoom) * (1 - k * 0.7);
+    shadow.scale.setScalar(1 + Math.sin(t * 0.9) * 0.04);
     backdrop.dust.rotation.y = t * 0.004;
     backdrop.dust.position.x = -camera.position.x * 0.15;
     backdrop.floor.material.uniforms.uTime.value = t;
     backdrop.wall.material.uniforms.uGlow.value = state.glow;
     glow.material.opacity = state.glow * 0.28;
     const ringVis = state.glow * 0.9 * (1 - state.zoom) * (1 - 0.6 * state.explode) * (1 - k);
+    shadow.position.z = state.posZ;
     halo.material.opacity = ringVis;
     halo2.material.opacity = ringVis;
     halo.rotation.z = t * 0.1;

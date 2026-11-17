@@ -140,6 +140,8 @@ export function buildPhone() {
     return l;
   }
 
+  const finishMats = { back: [], frame: [], plateau: [] };
+
   // ── Materials (tuned for a real, premium product look) ──
   const titanium = () =>
     new THREE.MeshPhysicalMaterial({
@@ -175,8 +177,10 @@ export function buildPhone() {
     const geo = roundedSlab(W, H, R, FRAME_D, bevel, { w: W - holeInset * 2, h: H - holeInset * 2, r: R - holeInset });
     const mat = titanium();
     addMesh(p, geo, mat);
+    finishMats.frame.push(mat);
     // side buttons (power right, volume left)
     const btnMat = polished();
+    finishMats.frame.push(btnMat);
     const bA = addMesh(p, new RoundedBoxGeometry(0.03, 0.3, 0.046, 4, 0.012), btnMat);
     bA.position.set(W / 2 - 0.004, 0.6, 0);
     const bB = addMesh(p, new RoundedBoxGeometry(0.03, 0.2, 0.046, 4, 0.012), btnMat);
@@ -241,7 +245,9 @@ export function buildPhone() {
     const gw = W - 0.016;
     const gh = H - 0.016;
     const gr = R - 0.008;
-    addMesh(p, roundedSlab(gw, gh, gr, GLASS_T, 0.007), frostedPearl());
+    const backMat = frostedPearl();
+    addMesh(p, roundedSlab(gw, gh, gr, GLASS_T, 0.007), backMat);
+    finishMats.back.push(backMat);
     const logoMat = new THREE.MeshPhysicalMaterial({
       map: TX.logoTexture(),
       transparent: true,
@@ -264,13 +270,15 @@ export function buildPhone() {
     const inner = new THREE.Group();
     p.group.add(inner);
     p.inner = inner;
+    // smoked-glass camera block: dark & glossy so it contrasts with the light back
     const plateMat = new THREE.MeshPhysicalMaterial({
-      color: '#e2e6eb',
-      metalness: 0.15,
-      roughness: 0.1,
+      color: '#14161a',
+      metalness: 0.35,
+      roughness: 0.08,
       clearcoat: 1,
-      clearcoatRoughness: 0.03,
+      clearcoatRoughness: 0.02,
     });
+    finishMats.plateau.push(plateMat);
     addMesh(p, roundedSlab(0.66, 0.66, 0.17, plateD, 0.012), plateMat, inner);
     addEdges(p, roundedOutline(0.66, 0.66, 0.17, [-plateD / 2 - 0.001, plateD / 2]), inner);
 
@@ -309,7 +317,8 @@ export function buildPhone() {
       clearcoatRoughness: 0,
       iridescence: 0.75,
       iridescenceIOR: 1.6,
-      iridescenceThicknessRange: [200, 600],
+      iridescenceThicknessMinimum: 200,
+      iridescenceThicknessMaximum: 600,
     });
     p.lenses = [];
     const lensPos = [
@@ -438,7 +447,10 @@ export function buildPhone() {
       battery: state.hlBattery * (1 - inspect.k),
       storage: state.hlStorage * (1 - inspect.k),
     };
-    if (inspect.id) focus[inspect.id] = Math.max(focus[inspect.id] || 0, inspect.k);
+    // X-ray the rest of the phone only for internal parts (or when it's already broken apart)
+    const internal = inspect.id === 'processor' || inspect.id === 'storage' || inspect.id === 'battery';
+    const xray = internal || state.explode > 0.5 ? 1 : 0;
+    if (inspect.id) focus[inspect.id] = Math.max(focus[inspect.id] || 0, inspect.k * xray);
     let anyFocus = 0;
     for (const k in focus) anyFocus = Math.max(anyFocus, focus[k]);
 
@@ -451,7 +463,8 @@ export function buildPhone() {
       const dim = anyFocus * (1 - hl);
       setPartOpacity(p, 1 - 0.86 * dim);
       const h = hover[id] || 0;
-      p.edgeMat.opacity = Math.min(1, state.outlines * 0.55 * (1 - dim) + hl * 0.9 + h * 0.9);
+      const inspected = inspect.id === id ? inspect.k : 0;
+      p.edgeMat.opacity = Math.min(1, state.outlines * 0.55 * (1 - dim) + hl * 0.9 * (1 - inspected * 0.85) + h * 0.9 * (1 - inspected * 0.85));
       for (const l of p.edges) l.visible = p.edgeMat.opacity > 0.003;
     }
 
@@ -469,9 +482,23 @@ export function buildPhone() {
     parts.screen.display.emissiveIntensity = parts.screen.baseEmissive * (1 - 0.6 * anyFocus);
   }
 
+  // Smoothly re-color the phone to one of the FINISHES
+  function setFinish(f, gsap, duration = 0.9) {
+    const go = (mats, hex) => {
+      const c = new THREE.Color(hex);
+      for (const m of mats) {
+        if (gsap) gsap.to(m.color, { r: c.r, g: c.g, b: c.b, duration, ease: 'power2.inOut', overwrite: true });
+        else m.color.copy(c);
+      }
+    };
+    go(finishMats.back, f.back);
+    go(finishMats.frame, f.frame);
+    go(finishMats.plateau, f.plateau);
+  }
+
   function partWorldPosition(id, target = tmp) {
     return parts[id].group.getWorldPosition(target);
   }
 
-  return { root, parts, meshes, update, partWorldPosition };
+  return { root, parts, meshes, update, partWorldPosition, setFinish };
 }

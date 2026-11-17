@@ -4,6 +4,7 @@ import '@fontsource/space-grotesk/400.css';
 import '@fontsource/space-grotesk/500.css';
 import '@fontsource/space-grotesk/600.css';
 import '@fontsource/space-grotesk/700.css';
+import '@fontsource-variable/inter';
 import './style.css';
 
 import * as THREE from 'three';
@@ -11,11 +12,13 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { ShaderMount, meshGradientFragmentShader, getShaderColorFromString, ShaderFitOptions } from '@paper-design/shaders';
 
 import { createStage } from './scene.js';
 import { buildPhone, smoothstep } from './phone.js';
 import { createEffects } from './effects.js';
-import { PARTS, SLIDES, SETTINGS, EXPLODED_POSE } from './config.js';
+import { PARTS, SLIDES, SETTINGS, EXPLODED_POSE, FINISHES, TECH_SPECS, PRICE } from './config.js';
 
 // Real sample photos (Unsplash license, via picsum.photos)
 import photoLandscape from './assets/photos/p1015.jpg';
@@ -31,6 +34,44 @@ const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const finePointer = matchMedia('(pointer: fine)').matches;
+
+// Depth layer: slow Paper mesh-gradient behind the 3D scene
+function mountBackdrop() {
+  const el = document.getElementById('backdrop');
+  try {
+    return new ShaderMount(
+      el,
+      meshGradientFragmentShader,
+      {
+        u_colors: ['#08090c', '#0b0d12', '#10141c', '#0a1a2c', '#08090c'].map(getShaderColorFromString),
+        u_colorsCount: 5,
+        u_distortion: 0.8,
+        u_swirl: 0.2,
+        u_grainMixer: 0,
+        u_grainOverlay: 0.06,
+        u_fit: ShaderFitOptions.cover,
+        u_scale: 1,
+        u_rotation: 0,
+        u_originX: 0.5,
+        u_originY: 0.5,
+        u_offsetX: 0,
+        u_offsetY: 0,
+        u_worldWidth: 0,
+        u_worldHeight: 0,
+      },
+      { alpha: false, premultipliedAlpha: false },
+      reduceMotion ? 0 : 0.25,
+      0,
+      1,
+      1920 * 1080,
+    );
+  } catch (e) {
+    console.warn('Backdrop shader unavailable', e);
+    return null;
+  }
+}
 
 function hasWebGL() {
   try {
@@ -62,6 +103,7 @@ async function init() {
   ]).catch(() => {});
 
   // ── 3D ──
+  mountBackdrop();
   const canvas = $('#webgl');
   const stage = createStage(canvas);
   const phone = buildPhone();
@@ -107,7 +149,11 @@ async function init() {
     target: new THREE.Vector3(),
     dir: new THREE.Vector3(0, 0, 1),
     dist: 4,
+    orbiting: false,
+    frozen: false,
   };
+  // free drag-to-spin on the main phone (desktop)
+  const spin = { angle: 0, vel: 0, dragging: false, lastX: 0 };
 
   // ── DOM ──
   const track = $('#track');
@@ -217,12 +263,16 @@ async function init() {
   tl.to(state, { explode: 0, camFlip: 0, duration: 0.6 }, 6.15);
   tl.to(state, { outlines: 0, duration: 0.35 }, 6.45);
   tl.to(state, { rotY: ROT3, rotX: 0.08, rotZ: 0, posZ: -0.6, duration: 0.8 }, 6.15);
-  // 7 → 8 · final hero shot
-  tl.to(state, { rotY: ROT4, rotX: 0.02, shift: 0, lift: 1, posZ: 0.15, glow: 1, duration: 0.85 }, 7.08);
+  // 7 → 8 · colors: turn to show the back finish
+  tl.to(state, { rotY: 3 * TAU + Math.PI - 0.5, rotX: 0.1, posZ: 0, duration: 0.85 }, 7.08);
+  // 8 → 9 · specs: phone steps back to make room for the spec grid
+  tl.to(state, { rotY: 4 * TAU - 0.35, posZ: -2.6, shift: 1.45, duration: 0.85 }, 8.08);
+  // 9 → 10 · final hero shot
+  tl.to(state, { rotY: 4 * TAU, rotX: 0.02, shift: 0, lift: 1, posZ: -0.35, glow: 1, duration: 0.85 }, 9.08);
   tl.set({}, {}, N - 1);
 
   // ── smooth, free scrolling (no snapping) ──
-  const lenis = new Lenis({ lerp: SETTINGS.smoothness, wheelMultiplier: 0.85, touchMultiplier: 1.2, smoothWheel: true });
+  const lenis = new Lenis({ lerp: reduceMotion ? 1 : SETTINGS.smoothness, wheelMultiplier: 0.85, touchMultiplier: 1.2, smoothWheel: true });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
@@ -303,12 +353,52 @@ async function init() {
   }
   $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
 
-  // ── tap a part → camera flies in + "what it is" panel ──
+  // ── tap a part → camera flies in, then you can orbit & zoom around it ──
   const infoEl = $('#info');
   const partOrder = Object.keys(PARTS);
   let selected = null;
+  const controls = new OrbitControls(stage.camera, canvas);
+  controls.enabled = false;
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.enablePan = false;
+  controls.rotateSpeed = 0.7;
+  controls.zoomSpeed = 0.8;
+  let orbitTimer = null;
+
+  function captureCamera() {
+    // hand the current camera pose back to the rig so the next move starts exactly here
+    inspect.target.copy(controls.target);
+    inspect.dir.copy(stage.camera.position).sub(controls.target);
+    inspect.dist = inspect.dir.length();
+    inspect.dir.normalize();
+  }
+  function startOrbit() {
+    if (!selected) return;
+    inspect.orbiting = true;
+    controls.target.copy(inspect.target);
+    const d = PARTS[selected].inspect.dist;
+    controls.minDistance = d * 0.45;
+    controls.maxDistance = d * 3;
+    controls.enabled = true;
+    controls.update();
+    document.body.classList.add('orbiting');
+  }
+  function stopOrbit() {
+    clearTimeout(orbitTimer);
+    if (inspect.orbiting) captureCamera();
+    inspect.orbiting = false;
+    controls.enabled = false;
+    document.body.classList.remove('orbiting');
+  }
+  controls.addEventListener('start', () => document.body.classList.add('dragging'));
+  controls.addEventListener('end', () => document.body.classList.remove('dragging'));
+
   function openInfo(id) {
     const c = PARTS[id];
+    const switching = !!selected && inspect.k > 0.5;
+    stopOrbit();
+    inspect.frozen = false;
     if (!inspect.id || inspect.k < 0.02) inspect.fresh = true;
     selected = id;
     inspect.id = id;
@@ -316,44 +406,54 @@ async function init() {
     $('.info-title', infoEl).textContent = c.name;
     $('.info-def p', infoEl).textContent = c.definition;
     $('.info-desc', infoEl).textContent = c.description;
+    $('.info-specs', infoEl).innerHTML = (c.specs || []).map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
     $('.info-list', infoEl).innerHTML = c.highlights.map((h) => `<li>${h}</li>`).join('');
+    $('.info-scroll', infoEl).scrollTop = 0;
     infoEl.classList.add('open');
     infoEl.setAttribute('aria-hidden', 'false');
     document.body.classList.add('inspecting');
+    lenis.stop();
     gsap.fromTo(
-      $$('.info-title, .info-def, .info-desc, .info-list li', infoEl),
+      $$('.info-title, .info-def, .info-desc, .info-specs div, .info-list li', infoEl),
       { opacity: 0, y: 14 },
-      { opacity: 1, y: 0, stagger: 0.05, duration: 0.5, ease: 'power2.out', delay: 0.15, overwrite: true },
+      { opacity: 1, y: 0, stagger: 0.04, duration: 0.5, ease: 'power2.out', delay: 0.15, overwrite: true },
     );
     $$('button', legendEl).forEach((b, i) => b.classList.toggle('active', labelParts[i] === id));
-    gsap.to(inspect, { k: 1, duration: 1.6, ease: 'power3.inOut', overwrite: true });
+    if (switching) {
+      // glide from the current orbit pose to the next part, then hand control back
+      orbitTimer = setTimeout(startOrbit, reduceMotion ? 50 : 1500);
+    } else {
+      gsap.to(inspect, { k: 1, duration: reduceMotion ? 0.01 : 1.6, ease: 'power3.inOut', overwrite: true, onComplete: startOrbit });
+    }
   }
   function closeInfo() {
     if (!selected) return;
+    stopOrbit();
+    inspect.frozen = true; // ease out from wherever the user left the camera
     selected = null;
     infoEl.classList.remove('open');
     infoEl.setAttribute('aria-hidden', 'true');
     document.body.classList.remove('inspecting');
     $$('button', legendEl).forEach((b) => b.classList.remove('active'));
+    lenis.start();
     gsap.to(inspect, {
       k: 0,
-      duration: 1.3,
+      duration: reduceMotion ? 0.01 : 1.3,
       ease: 'power3.inOut',
       overwrite: true,
       onComplete: () => {
-        if (!selected) inspect.id = null;
+        if (!selected) {
+          inspect.id = null;
+          inspect.frozen = false;
+        }
       },
     });
   }
   $('.info-close', infoEl).addEventListener('click', closeInfo);
   $('#info-next').addEventListener('click', () => openInfo(partOrder[(partOrder.indexOf(selected) + 1) % partOrder.length]));
   $('#info-prev').addEventListener('click', () => openInfo(partOrder[(partOrder.indexOf(selected) - 1 + partOrder.length) % partOrder.length]));
-  // scrolling away zooms back out
-  lenis.on('scroll', (e) => {
-    if (selected && !navigating && Math.abs(e.velocity) > 2) closeInfo();
-  });
 
-  // ── pointer: parallax, hover, click ──
+  // ── pointer: parallax, hover, click, drag-to-spin ──
   const pointer = { x: 0, y: 0, nx: 0, ny: 0, onCanvas: false, mouse: false };
   const par = { x: 0, y: 0 };
   window.addEventListener('pointermove', (e) => {
@@ -363,6 +463,12 @@ async function init() {
     pointer.ny = -(e.clientY / window.innerHeight) * 2 + 1;
     pointer.onCanvas = e.target === canvas;
     pointer.mouse = e.pointerType === 'mouse';
+    if (spin.dragging) {
+      const dx = e.clientX - spin.lastX;
+      spin.lastX = e.clientX;
+      spin.angle += dx * 0.008;
+      spin.vel = dx * 0.008;
+    }
   });
   document.addEventListener('pointerleave', () => (pointer.onCanvas = false));
 
@@ -380,12 +486,105 @@ async function init() {
   }
 
   let downAt = null;
-  canvas.addEventListener('pointerdown', (e) => (downAt = { x: e.clientX, y: e.clientY }));
+  canvas.addEventListener('pointerdown', (e) => {
+    downAt = { x: e.clientX, y: e.clientY };
+    // outside of inspect mode, a mouse drag spins the phone (it eases back afterwards)
+    if (!selected && e.pointerType === 'mouse') {
+      spin.dragging = true;
+      spin.lastX = e.clientX;
+      document.body.classList.add('dragging');
+    }
+  });
+  window.addEventListener('pointerup', () => {
+    spin.dragging = false;
+    document.body.classList.remove('dragging');
+  });
   canvas.addEventListener('click', (e) => {
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 8) return;
     const id = pick(e.clientX, e.clientY);
     if (id && id !== selected) openInfo(id);
     else if (!id) closeInfo();
+  });
+
+  // ── finishes ──
+  const swatchesEl = $('#swatches');
+  const swatchName = $('#swatch-name');
+  let finish = FINISHES[0];
+  function setFinish(f, animate = true) {
+    finish = f;
+    phone.setFinish(f, animate ? gsap : null);
+    swatchName.textContent = f.name;
+    $$('.swatch', swatchesEl).forEach((b) => b.setAttribute('aria-checked', String(b.dataset.id === f.id)));
+  }
+  FINISHES.forEach((f) => {
+    const b = document.createElement('button');
+    b.className = 'swatch';
+    b.dataset.id = f.id;
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-label', f.name);
+    b.title = f.name;
+    b.style.setProperty('--sw', f.swatch);
+    b.addEventListener('click', () => setFinish(f));
+    swatchesEl.appendChild(b);
+  });
+  setFinish(FINISHES[0], false);
+
+  // ── tech specs grid + price ──
+  $('#spec-grid').innerHTML = TECH_SPECS.map(
+    (g) => `<article class="spec-card tilt"><h4>${g.group}</h4><ul>${g.items.map((i) => `<li>${i}</li>`).join('')}</ul></article>`,
+  ).join('');
+  $$('[data-price]').forEach((el) => (el.textContent = PRICE));
+  const toastEl = $('#toast');
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 3200);
+  }
+  $('#btn-preorder').addEventListener('click', () => toast(`NovaEdge X1 in ${finish.name} — pre-orders open soon. (Concept product)`));
+
+  // ── count-up numbers ──
+  function countUp(root) {
+    $$('.num[data-count]', root).forEach((el) => {
+      const end = parseFloat(el.dataset.count);
+      const dec = +(el.dataset.decimals || 0);
+      const fmt = (v) => (el.dataset.format ? Math.round(v).toLocaleString('en-US') : v.toFixed(dec));
+      if (reduceMotion) {
+        el.textContent = fmt(end);
+        return;
+      }
+      const o = { v: 0 };
+      gsap.to(o, { v: end, duration: 1.4, ease: 'power2.out', overwrite: true, onUpdate: () => (el.textContent = fmt(o.v)) });
+    });
+  }
+
+  // ── depth: 3D tilt on cards & photos, magnetic buttons, custom cursor ──
+  function bindTilt(el) {
+    el.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      gsap.to(el, { rotateY: x * 10, rotateX: -y * 10, transformPerspective: 700, duration: 0.4, ease: 'power2.out' });
+    });
+    el.addEventListener('pointerleave', () => gsap.to(el, { rotateY: 0, rotateX: 0, duration: 0.6, ease: 'power3.out' }));
+  }
+  if (!reduceMotion && finePointer) {
+    $$('.tilt').forEach(bindTilt);
+    $$('.magnetic').forEach((el) => {
+      el.addEventListener('pointermove', (e) => {
+        const r = el.getBoundingClientRect();
+        gsap.to(el, { x: (e.clientX - r.left - r.width / 2) * 0.18, y: (e.clientY - r.top - r.height / 2) * 0.25, duration: 0.3, ease: 'power2.out' });
+      });
+      el.addEventListener('pointerleave', () => gsap.to(el, { x: 0, y: 0, duration: 0.5, ease: 'elastic.out(1, 0.5)' }));
+    });
+  }
+  const cursorEl = $('#cursor');
+  const cursorPos = { x: -100, y: -100 };
+  if (finePointer && !reduceMotion) cursorEl.classList.add('on');
+  document.addEventListener('pointerover', (e) => {
+    cursorEl.classList.toggle('hot', !!(e.target.closest && e.target.closest('button, a, .tag, .swatch')));
   });
 
   const tooltip = $('#tooltip');
@@ -395,6 +594,7 @@ async function init() {
 
   // ── section moments (play when a section reaches the middle of the screen) ──
   function onEnter(i) {
+    countUp(sections[i]);
     const chars = splits.get(i);
     if (chars) {
       gsap.fromTo(chars, { yPercent: 70, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.8, stagger: 0.014, ease: 'power3.out', overwrite: true });
@@ -435,6 +635,11 @@ async function init() {
   }
 
   // ── render loop ──
+  const DEPTH = [-70, -38, -12, 22]; // px per section of scroll for .depth-1 … .depth-4
+  const depthLayers = panels.map((p) => [1, 2, 3, 4].map((n) => $$(`.depth-${n}`, p)));
+  const navProgress = $('.nav-progress span');
+  const navButtons = $$('.nav-links button');
+  let navActive = -1;
   const t0 = performance.now();
   const focusWorld = new THREE.Vector3();
   const v = new THREE.Vector3();
@@ -443,7 +648,7 @@ async function init() {
   let ready = false;
 
   function updateInspect() {
-    if (!inspect.id) return;
+    if (!inspect.id || inspect.frozen || inspect.orbiting) return;
     const p = phone.parts[inspect.id];
     const cfg = PARTS[inspect.id].inspect;
     const host = p.inner || p.group;
@@ -476,7 +681,17 @@ async function init() {
     par.x += (pointer.nx * calm - par.x) * 0.04;
     par.y += (pointer.ny * calm - par.y) * 0.04;
     stage.pivot.position.y = Math.sin(t * 0.9) * 0.06 * calm + intro.y;
-    stage.pivot.rotation.set(-par.y * 0.05 + Math.sin(t * 0.6) * 0.015 * calm, par.x * 0.09 + intro.spin, Math.sin(t * 0.5) * 0.01 * calm);
+    // drag-to-spin with inertia, easing back to the scroll choreography
+    if (!spin.dragging) {
+      spin.angle += spin.vel;
+      spin.vel *= 0.9;
+      spin.angle *= 0.965;
+    }
+    stage.pivot.rotation.set(
+      -par.y * 0.05 + Math.sin(t * 0.6) * 0.015 * calm,
+      par.x * 0.09 + intro.spin + spin.angle * calm,
+      Math.sin(t * 0.5) * 0.01 * calm,
+    );
     stage.pivot.scale.setScalar(intro.s);
 
     for (const id in hoverW) {
@@ -491,7 +706,14 @@ async function init() {
     phone.root.localToWorld(focusWorld);
     updateInspect();
     stage.updateCamera(state, focusWorld, t, inspect);
+    if (inspect.orbiting) controls.update();
     stage.camera.updateMatrixWorld();
+
+    // custom cursor (lerped)
+    cursorPos.x += (pointer.x - cursorPos.x) * 0.25;
+    cursorPos.y += (pointer.y - cursorPos.y) * 0.25;
+    cursorEl.style.transform = `translate(${cursorPos.x.toFixed(1)}px, ${cursorPos.y.toFixed(1)}px)`;
+    cursorEl.classList.toggle('hot-3d', !!hovered);
 
     // hover (mouse only)
     const nextHover = ready && pointer.onCanvas && pointer.mouse ? pick(pointer.x, pointer.y) : null;
@@ -507,11 +729,29 @@ async function init() {
 
     // text fades in as it scrolls into view and out as it leaves
     panels.forEach((el, i) => {
-      const d = Math.abs(tt - i);
+      const sd = tt - i;
+      const d = Math.abs(sd);
       const o = (1 - smoothstep(0.22, 0.5, d)) * calm;
       el.style.opacity = o.toFixed(3);
       el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+      // depth: layers drift at different speeds as the page scrolls
+      if (o > 0.01 && !reduceMotion) {
+        const layers = depthLayers[i];
+        for (let L = 0; L < layers.length; L++) {
+          for (const node of layers[L]) node.style.transform = `translate3d(0, ${(sd * DEPTH[L]).toFixed(1)}px, 0)`;
+        }
+      }
     });
+
+    // nav: progress hairline + active section
+    navProgress.style.transform = `scaleX(${clamp(lenis.scroll / (lenis.limit || 1), 0, 1)})`;
+    const navNear = Math.round(tt);
+    if (navNear !== navActive) {
+      navActive = navNear;
+      let best = null;
+      for (const b of navButtons) if (+b.dataset.goto <= navNear) best = b;
+      navButtons.forEach((b) => b.classList.toggle('active', b === best));
+    }
 
     // floating labels
     const focusW = { processor: state.hlProcessor, camera: state.hlCamera, battery: state.hlBattery, storage: state.hlStorage };
@@ -559,14 +799,14 @@ async function init() {
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   gsap.to('#loader', { autoAlpha: 0, duration: 0.9, ease: 'power2.out', onComplete: () => $('#loader')?.remove() });
   gsap.to(intro, { s: 1, y: 0, spin: 0, duration: 2.4, ease: 'expo.out' });
-  gsap.from('.panel-intro .kicker, .panel-intro .body', { opacity: 0, y: 20, stagger: 0.12, duration: 0.9, delay: 0.5, ease: 'power3.out' });
+  gsap.from('.panel-intro .kicker, .panel-intro .lede, .panel-intro .cta-row', { opacity: 0, y: 20, stagger: 0.12, duration: 0.9, delay: 0.5, ease: 'power3.out' });
   setTimeout(() => {
     ready = true;
     lenis.start();
   }, 400);
 
   // handy for debugging / rehearsing: window.novaedge.goTo(4)
-  window.novaedge = { goTo, state, tl, lenis, phone, stage, openInfo, closeInfo, unit: () => unit };
+  window.novaedge = { goTo, state, tl, lenis, phone, stage, openInfo, closeInfo, setFinish, unit: () => unit, inspect };
 }
 
 init();

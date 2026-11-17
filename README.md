@@ -20,14 +20,18 @@ One long, continuous page: as you scroll, the text glides by and the phone anima
 | Battery | A charge glow sweeps up the battery; the battery icon fills |
 | Storage | Files, photos, videos and documents orbit the storage chip |
 | Reassembly | Parts come back together, plus another 360° |
-| Final | Phone comes to center with a glowing halo: **NOVAEDGE X1** |
+| Colors | Pick one of four finishes; the phone re-colors live |
+| Tech specs | The full spec sheet |
+| Final | Phone comes to center with a glowing halo: **NOVAEDGE X1**, plus a pre-order CTA |
 
 ## Interacting
 
 - **Scroll** (mouse wheel, trackpad or swipe) to move through the page. It's free and smooth, with no snapping.
 - **Hover** a part and it glows and shows its name.
 - **Tap / click** a part (or a label / button) and the camera flies in on it, with a panel explaining
-  **what it is** and what it does. Use *Previous part / Next part* to fly between parts, or ✕, `Esc` or scrolling to zoom back out.
+  **what it is**, its **specs** and what it does. Then **drag to orbit** around it and **scroll / pinch to zoom**.
+  *Previous / Next* fly between parts; ✕ or `Esc` zooms back out.
+- **Drag** the phone (desktop) to spin it; it eases back when you let go.
 - Presenting with a keyboard or clicker? `→` / `Space` / `Page Down` glide to the next section,
   `←` / `Page Up` go back, `F` toggles fullscreen. These are optional; nothing on screen shows slide numbers.
 
@@ -57,6 +61,8 @@ To make a production build (faster, smaller): `npm run build`, then `npm run pre
 Almost everything is in **`src/config.js`**:
 
 - `PALETTE`: the 60/30/10 colors (graphite black / pearl silver / electric cyan)
+- `FINISHES`: the four color variants (back glass, frame and camera-block colors)
+- `TECH_SPECS`, `PRICE` and each part's `specs`: all spec text (fictional concept specs)
 - `PARTS`: each component's name, description, highlight bullets and
   - `explode`: how far it flies out when the phone breaks apart `[x, y, z]`
   - `delay`: the order parts move in (0 = first, 1 = last)
@@ -70,10 +76,16 @@ Almost everything is in **`src/config.js`**:
 Slide text lives in `index.html`. The 3D model is in `src/phone.js`, the effects in `src/effects.js`,
 the lighting and background in `src/scene.js`, and the scroll timeline in `src/main.js`.
 
+## Design skills installed (in `.claude/skills/`)
+
+UI UX Pro Max, design-taste (and its genre packs), Better Design (needs its MCP server connected) and Superdesign
+(needs a Superdesign account login). Claude Code loads them automatically in future sessions.
+
 ## Tech
 
 [Vite](https://vitejs.dev) · [Three.js](https://threejs.org) (3D, bloom, reflections) ·
-[GSAP + ScrollTrigger + SplitText](https://gsap.com) (animation) · [Lenis](https://lenis.darkroom.engineering) (smooth scroll)
+[GSAP + ScrollTrigger + SplitText](https://gsap.com) (animation) · [Lenis](https://lenis.darkroom.engineering) (smooth scroll) ·
+[Paper Shaders](https://github.com/paper-design/shaders) (animated mesh-gradient backdrop) · Inter (type)
 
-> No numerical specifications are stated anywhere. Sample photos by Alexey Topolyanskiy, Roksolana Zasiadko and
+> Product and specifications are a fictional concept. Sample photos by Alexey Topolyanskiy, Roksolana Zasiadko and
 > Vashishtha Jogi (Unsplash license, via picsum.photos).

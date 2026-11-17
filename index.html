@@ -4,163 +4,230 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#08090C" />
-    <meta name="description" content="NovaEdge X1 — Power Your Ambition, Connect Your Future. An interactive 3D product experience." />
+    <meta name="description" content="NovaEdge X1 — Power Your Ambition, Connect Your Future. Titanium. 200 MP. NovaCore X1." />
     <title>NovaEdge X1 — Power Your Ambition</title>
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308090C'/%3E%3Crect x='22' y='10' width='20' height='44' rx='5' fill='none' stroke='%232EA8FF' stroke-width='3'/%3E%3Ccircle cx='32' cy='46' r='3' fill='%232EA8FF'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308090C'/%3E%3Crect x='22' y='10' width='20' height='44' rx='5' fill='none' stroke='%23D9DEE4' stroke-width='3'/%3E%3Ccircle cx='32' cy='46' r='3' fill='%232EA8FF'/%3E%3C/svg%3E"
     />
   </head>
   <body>
-    <canvas id="webgl" aria-label="Interactive 3D model of the NovaEdge X1 smartphone"></canvas>
+    <a class="skip-link" href="#specs">Skip to tech specs</a>
 
-    <!-- floating component labels (exploded view) -->
+    <!-- depth layer 1: animated Paper mesh-gradient backdrop -->
+    <div id="backdrop" aria-hidden="true"></div>
+    <!-- depth layer 2: the 3D phone -->
+    <canvas id="webgl" aria-label="Interactive 3D model of the NovaEdge X1 smartphone. Tap a part to zoom in."></canvas>
+    <!-- depth layer 3: floating component labels -->
     <div id="labels" aria-hidden="true"></div>
 
-    <header class="chrome">
-      <div class="brand"><span class="brand-mark"></span>NOVAEDGE</div>
-      <button id="btn-fullscreen" class="icon-btn" title="Fullscreen" aria-label="Toggle fullscreen">
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
-        </svg>
-      </button>
+    <!-- product nav, like a real product page -->
+    <header class="nav" id="nav">
+      <a class="nav-brand" href="#" data-goto="0"><span class="brand-mark"></span>NovaEdge X1</a>
+      <nav class="nav-links" aria-label="Sections">
+        <button data-goto="1">Design</button>
+        <button data-goto="3">Performance</button>
+        <button data-goto="4">Camera</button>
+        <button data-goto="5">Battery</button>
+        <button data-goto="8">Colors</button>
+        <button data-goto="9">Specs</button>
+      </nav>
+      <div class="nav-actions">
+        <button id="btn-fullscreen" class="icon-btn" title="Fullscreen" aria-label="Toggle fullscreen">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          </svg>
+        </button>
+        <button class="btn btn-primary btn-sm magnetic" data-goto="10">Pre-order</button>
+      </div>
+      <div class="nav-progress"><span></span></div>
     </header>
     <div id="mobile-fade"></div>
 
-    <!-- one long continuous page: the text scrolls by, the phone animates with it -->
     <main id="track">
+      <!-- 0 · Hero -->
       <section class="section" data-slide="0">
         <div class="panel panel-intro">
-          <p class="kicker">Introducing</p>
-          <h1 class="title brand-title split">NovaEdge X1</h1>
-          <p class="body">A new generation of smartphone — crafted for people who move fast and think big.</p>
+          <p class="kicker depth-1">New · NovaEdge X1</p>
+          <h1 class="title brand-title split depth-2">NovaEdge X1</h1>
+          <p class="lede depth-3">Titanium. 200 MP. NovaCore X1.<br />The most capable phone we've ever made.</p>
+          <div class="cta-row depth-4">
+            <button class="btn btn-primary magnetic" data-goto="10">Pre-order</button>
+            <span class="price" data-price></span>
+          </div>
         </div>
       </section>
 
+      <!-- 1 · Design -->
       <section class="section" data-slide="1">
         <div class="panel">
-          <p class="kicker">Design</p>
-          <h2 class="title split">Elegant from every angle.</h2>
-          <p class="body">
-            Slim edges, a precision-crafted titanium frame and a signature triple-camera design. NovaEdge X1 is made to look as
-            remarkable as it performs.
+          <p class="kicker depth-1">Design</p>
+          <h2 class="title split depth-2">Titanium. Thin. Unmistakable.</h2>
+          <p class="body depth-3">
+            A grade 5 titanium frame wraps a frosted glass back and an edge-to-edge 6.8″ display — in a body just 7.8 mm thin.
           </p>
-          <ul class="chips">
-            <li>Slim profile</li>
-            <li>Titanium frame</li>
-            <li>Triple camera</li>
-          </ul>
-          <p class="hint">Tap any part of the phone to take a closer look.</p>
+          <dl class="stats depth-4">
+            <div><dt><span class="num" data-count="7.8" data-decimals="1">7.8</span><small>mm</small></dt><dd>thin</dd></div>
+            <div><dt><span class="num" data-count="196">196</span><small>g</small></dt><dd>light</dd></div>
+            <div><dt>IP68</dt><dd>water & dust</dd></div>
+          </dl>
+          <p class="hint depth-4">Tap any part of the phone — then drag to look around it.</p>
         </div>
       </section>
 
+      <!-- 2 · Inside -->
       <section class="section" data-slide="2">
         <div class="panel">
-          <p class="kicker">Inside</p>
-          <h2 class="title split">Engineered layer by layer.</h2>
-          <p class="body">Every component has its place. Tap a part to fly in and see what it does.</p>
-          <div class="legend" id="legend"></div>
+          <p class="kicker depth-1">Inside</p>
+          <h2 class="title split depth-2">Engineered layer by layer.</h2>
+          <p class="body depth-3">Seven precision components in a 7.8 mm body. Tap one to fly in, orbit around it and see its specs.</p>
+          <div class="legend depth-4" id="legend"></div>
         </div>
       </section>
 
+      <!-- 3 · Processor -->
       <section class="section" data-slide="3">
         <div class="panel">
-          <p class="kicker">Performance</p>
-          <h2 class="title split">A powerful processor at its core.</h2>
-          <p class="body">Built for fast performance and seamless multitasking — switch between apps, games and work without missing a beat.</p>
-          <div class="widget multitask" id="multitask">
+          <p class="kicker depth-1">Performance</p>
+          <h2 class="title split depth-2">NovaCore X1. Built on 2 nm.</h2>
+          <p class="body depth-3">A 10-core CPU, 12-core GPU with hardware ray tracing and a 50 TOPS neural engine — fast enough to edit 8K video and run on-device AI at the same time.</p>
+          <dl class="stats depth-4">
+            <div><dt><span class="num" data-count="2">2</span><small>nm</small></dt><dd>process</dd></div>
+            <div><dt><span class="num" data-count="10">10</span><small>-core</small></dt><dd>CPU</dd></div>
+            <div><dt><span class="num" data-count="50">50</span><small>TOPS</small></dt><dd>AI engine</dd></div>
+          </dl>
+          <div class="widget multitask depth-4" id="multitask">
             <div class="mt-grid">
-              <div class="mt-app"><i></i>Video</div>
-              <div class="mt-app"><i></i>Music</div>
-              <div class="mt-app"><i></i>Maps</div>
-              <div class="mt-app"><i></i>Chat</div>
-              <div class="mt-app"><i></i>Games</div>
-              <div class="mt-app"><i></i>Work</div>
+              <div class="mt-app"><i></i>8K edit</div>
+              <div class="mt-app"><i></i>Ray-traced game</div>
+              <div class="mt-app"><i></i>On-device AI</div>
             </div>
-            <div class="mt-meter"><span>Seamless multitasking</span><div class="mt-bar"><b></b></div></div>
+            <div class="mt-meter"><span>Running together</span><div class="mt-bar"><b></b></div></div>
           </div>
         </div>
       </section>
 
+      <!-- 4 · Camera -->
       <section class="section" data-slide="4">
         <div class="panel">
-          <p class="kicker">Camera</p>
-          <h2 class="title split">A triple-camera system for every shot.</h2>
-          <p class="body">Three lenses work together to capture sharp detail, vibrant color and cinematic moments — day or night.</p>
-          <div class="widget photos" id="photos"></div>
+          <p class="kicker depth-1">Camera</p>
+          <h2 class="title split depth-2">200 MP. See everything.</h2>
+          <p class="body depth-3">A 200 MP main camera, 50 MP ultra-wide and a 64 MP periscope with 6× optical zoom — plus 8K video at 60 fps.</p>
+          <dl class="stats depth-4">
+            <div><dt><span class="num" data-count="200">200</span><small>MP</small></dt><dd>main</dd></div>
+            <div><dt><span class="num" data-count="6">6</span><small>×</small></dt><dd>optical zoom</dd></div>
+            <div><dt>8K<small>60</small></dt><dd>video</dd></div>
+          </dl>
+          <div class="widget photos depth-4" id="photos"></div>
         </div>
       </section>
 
+      <!-- 5 · Battery -->
       <section class="section" data-slide="5">
         <div class="panel">
-          <p class="kicker">Battery</p>
-          <h2 class="title split">Power that lasts all day.</h2>
-          <p class="body">A long-lasting battery designed to keep up with your day — from your first alarm to your last message.</p>
-          <div class="widget battery-widget">
+          <p class="kicker depth-1">Battery</p>
+          <h2 class="title split depth-2">Two days. One charge.</h2>
+          <p class="body depth-3">A 5,500 mAh silicon-carbon battery lasts up to two days. When you do need power, 100 W charging gets you to 50% in 12 minutes.</p>
+          <dl class="stats depth-4">
+            <div><dt><span class="num" data-count="5500" data-format="1">5,500</span><small>mAh</small></dt><dd>capacity</dd></div>
+            <div><dt><span class="num" data-count="100">100</span><small>W</small></dt><dd>wired</dd></div>
+            <div><dt><span class="num" data-count="50">50</span><small>W</small></dt><dd>wireless</dd></div>
+          </dl>
+          <div class="widget battery-widget depth-4">
             <div class="battery-icon"><div class="battery-fill" id="battery-fill"></div><div class="battery-cap"></div></div>
-            <div class="battery-text"><strong>All-day</strong><span>battery performance</span></div>
+            <div class="battery-text"><strong>50% in 12 min</strong><span>with 100 W charging</span></div>
           </div>
         </div>
       </section>
 
+      <!-- 6 · Storage -->
       <section class="section" data-slide="6">
         <div class="panel">
-          <p class="kicker">Storage</p>
-          <h2 class="title split">Generous space for everything.</h2>
-          <p class="body">Keep your photos, videos, apps and documents close — with plenty of room for what matters most.</p>
-          <ul class="widget files" id="files">
-            <li><i class="f-photo"></i>Photos</li>
-            <li><i class="f-video"></i>Videos</li>
-            <li><i class="f-doc"></i>Documents</li>
-            <li><i class="f-music"></i>Music</li>
-            <li><i class="f-app"></i>Apps</li>
-          </ul>
+          <p class="kicker depth-1">Storage</p>
+          <h2 class="title split depth-2">Up to 1 TB. Room for everything.</h2>
+          <p class="body depth-3">Ultra-fast UFS 4.1 storage in 256 GB, 512 GB or 1 TB, paired with 16 GB of memory — so 8K footage, games and files never have to wait.</p>
+          <dl class="stats depth-4">
+            <div><dt><span class="num" data-count="1">1</span><small>TB</small></dt><dd>max storage</dd></div>
+            <div><dt><span class="num" data-count="16">16</span><small>GB</small></dt><dd>RAM</dd></div>
+            <div><dt>UFS<small>4.1</small></dt><dd>storage</dd></div>
+          </dl>
         </div>
       </section>
 
+      <!-- 7 · Reassembly -->
       <section class="section" data-slide="7">
         <div class="panel">
-          <p class="kicker">Design</p>
-          <h2 class="title split">Every component. One seamless design.</h2>
-          <p class="body">Processor, camera, battery and storage come together in a sleek, modern form that feels as good as it looks.</p>
+          <p class="kicker depth-1">Design</p>
+          <h2 class="title split depth-2">Every component. One seamless design.</h2>
+          <p class="body depth-3">Display, chip, camera, battery and storage come together inside a titanium frame that feels as good as it looks.</p>
         </div>
       </section>
 
+      <!-- 8 · Colors -->
       <section class="section" data-slide="8">
+        <div class="panel">
+          <p class="kicker depth-1">Colors</p>
+          <h2 class="title split depth-2">Four finishes. Pick yours.</h2>
+          <p class="body depth-3">Frosted glass and titanium, color-matched in four finishes.</p>
+          <div class="swatches depth-4" id="swatches" role="radiogroup" aria-label="Choose a finish"></div>
+          <p class="swatch-name depth-4" id="swatch-name" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <!-- 9 · Tech specs -->
+      <section class="section" data-slide="9" id="specs">
+        <div class="panel panel-wide">
+          <p class="kicker depth-1">Tech specs</p>
+          <h2 class="title split depth-2">The numbers.</h2>
+          <div class="spec-grid depth-3" id="spec-grid" data-lenis-prevent></div>
+        </div>
+      </section>
+
+      <!-- 10 · Final -->
+      <section class="section" data-slide="10">
         <div class="panel panel-center panel-final">
           <h2 class="final-title split">NOVAEDGE X1</h2>
           <p class="tagline">Power Your Ambition, Connect Your Future.</p>
           <div class="final-actions">
-            <button class="btn btn-primary" data-goto="2">Explore the components</button>
-            <button class="btn btn-ghost" data-goto="0">Back to top</button>
+            <button class="btn btn-primary magnetic" id="btn-preorder">Pre-order · <span data-price></span></button>
+            <button class="btn btn-ghost" data-goto="2">Explore the components</button>
           </div>
-          <p class="credits">Sample photos: Alexey Topolyanskiy, Roksolana Zasiadko, Vashishtha Jogi via Unsplash.</p>
+          <p class="credits">Sample photos: Alexey Topolyanskiy, Roksolana Zasiadko, Vashishtha Jogi via Unsplash. Product and specifications are a concept.</p>
         </div>
       </section>
     </main>
 
     <div id="tooltip" role="tooltip"><strong></strong><span>Tap to zoom in</span></div>
+    <div id="orbit-hint" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3" /><circle cx="12" cy="12" r="4" /></svg>
+      Drag to orbit · Scroll or pinch to zoom
+    </div>
 
-    <aside id="info" aria-hidden="true">
+    <aside id="info" aria-hidden="true" aria-labelledby="info-title">
       <button class="info-close icon-btn" aria-label="Close and zoom out">
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <path d="M6 6l12 12M18 6L6 18" />
         </svg>
       </button>
-      <p class="kicker info-kicker"></p>
-      <h3 class="info-title"></h3>
-      <div class="info-def">
-        <span>What it is</span>
-        <p></p>
+      <div class="info-scroll">
+        <p class="kicker info-kicker"></p>
+        <h3 class="info-title" id="info-title"></h3>
+        <div class="info-def">
+          <span>What it is</span>
+          <p></p>
+        </div>
+        <p class="info-desc"></p>
+        <dl class="info-specs"></dl>
+        <ul class="info-list"></ul>
       </div>
-      <p class="info-desc"></p>
-      <ul class="info-list"></ul>
       <div class="info-nav">
-        <button class="btn btn-ghost" id="info-prev">← Previous part</button>
-        <button class="btn btn-ghost" id="info-next">Next part →</button>
+        <button class="btn btn-ghost" id="info-prev">← Previous</button>
+        <button class="btn btn-ghost" id="info-next">Next →</button>
       </div>
     </aside>
 
+    <div id="toast" role="status" aria-live="polite"></div>
+    <div id="cursor" aria-hidden="true"><span></span></div>
     <div id="flash"></div>
 
     <div id="loader">
