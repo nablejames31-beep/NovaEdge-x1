@@ -1994,3 +1994,65 @@ body::-webkit-scrollbar {
 .section {
   overflow-x: clip;
 }
+
+/* photo cards are buttons now (tap to view full screen) */
+button.photo {
+  padding: 0;
+  background: none;
+  cursor: zoom-in;
+  font: inherit;
+  color: inherit;
+}
+.photo img {
+  image-rendering: auto;
+}
+
+/* full-screen photo viewer */
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 24px;
+  background: rgba(4, 5, 8, 0.92);
+  backdrop-filter: blur(14px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s var(--ease-out);
+  cursor: zoom-out;
+}
+#lightbox.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+#lightbox img {
+  max-width: min(92vw, 1200px);
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  transform: scale(0.94);
+  transition: transform 0.45s var(--ease-out);
+}
+#lightbox.open img {
+  transform: none;
+}
+#lightbox figcaption {
+  font-size: 14px;
+  color: var(--silver);
+}
+.lightbox-close {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.brand-emblem {
+  color: var(--silver);
+  flex: none;
+  filter: drop-shadow(0 0 6px rgba(46, 168, 255, 0.35));
+}

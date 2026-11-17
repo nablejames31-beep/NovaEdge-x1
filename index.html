@@ -8,7 +8,7 @@
     <title>NovaEdge X1 — Power Your Ambition</title>
     <link
       rel="icon"
-      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308090C'/%3E%3Crect x='22' y='10' width='20' height='44' rx='5' fill='none' stroke='%23D9DEE4' stroke-width='3'/%3E%3Ccircle cx='32' cy='46' r='3' fill='%232EA8FF'/%3E%3C/svg%3E"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2308090C'/%3E%3Cpath d='M44.6 15.7A25.6 25.6 0 1 0 50.3 22.3' fill='none' stroke='%23D9DEE4' stroke-width='3.4'/%3E%3Cpath d='M32 12.8Q34.2 29.8 44.8 32Q34.2 34.2 32 51.2Q29.8 34.2 19.2 32Q29.8 29.8 32 12.8Z' fill='%23D9DEE4'/%3E%3Cpath d='M51.8 9.3Q52.4 12.8 54.7 13.4Q52.4 14 51.8 17.6Q51.2 14 48.9 13.4Q51.2 12.8 51.8 9.3Z' fill='%232EA8FF'/%3E%3C/svg%3E"
     />
   </head>
   <body>
@@ -26,7 +26,7 @@
 
     <!-- product nav, like a real product page -->
     <header class="nav" id="nav">
-      <a class="nav-brand" href="#" data-goto="0"><span class="brand-mark"></span>NovaEdge X1</a>
+      <a class="nav-brand" href="#" data-goto="0"><svg class="brand-emblem" viewBox="0 0 64 64" width="22" height="22" aria-hidden="true"><path d="M44.6 15.7A25.6 25.6 0 1 0 50.3 22.3" fill="none" stroke="currentColor" stroke-width="2.9"/><path d="M32 12.8Q34.2 29.8 44.8 32Q34.2 34.2 32 51.2Q29.8 34.2 19.2 32Q29.8 29.8 32 12.8Z" fill="currentColor"/><path d="M51.8 9.3Q52.4 12.8 54.7 13.4Q52.4 14 51.8 17.6Q51.2 14 48.9 13.4Q51.2 12.8 51.8 9.3Z" fill="#2EA8FF"/></svg>NovaEdge X1</a>
       <nav class="nav-links" aria-label="Sections">
         <button data-goto="1">Design</button>
         <button data-goto="3">Performance</button>
@@ -243,6 +243,12 @@
         <button class="btn btn-ghost" id="info-next">Next →</button>
       </div>
     </aside>
+
+    <figure id="lightbox" aria-hidden="true">
+      <img alt="Sample photo, full resolution" />
+      <figcaption></figcaption>
+      <span class="lightbox-close">Tap anywhere to close</span>
+    </figure>
 
     <div id="toast" role="status" aria-live="polite"></div>
     <canvas id="trail" aria-hidden="true"></canvas>

@@ -31,6 +31,9 @@ import { PARTS, SLIDES, SETTINGS, EXPLODED_POSE, FINISHES, TECH_SPECS, PRICE } f
 import photoLandscape from './assets/photos/p1015.jpg';
 import photoPortrait from './assets/photos/p1027.jpg';
 import photoNight from './assets/photos/p1022.jpg';
+import photoLandscapeFull from './assets/photos/p1015-full.jpg';
+import photoPortraitFull from './assets/photos/p1027-full.jpg';
+import photoNightFull from './assets/photos/p1022-full.jpg';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 ScrollTrigger.config({ ignoreMobileResize: true });
@@ -170,14 +173,37 @@ async function init() {
   const panels = sections.map((s) => $('.panel', s));
 
   const photosEl = $('#photos');
+  const lightbox = $('#lightbox');
+  const lightboxImg = $('img', lightbox);
+  const lightboxCap = $('figcaption', lightbox);
+  function openPhoto(p) {
+    lightboxImg.src = p.src; // show the sharp card image instantly…
+    lightboxCap.textContent = `${p.caption} · shot on NovaEdge X1 (sample)`;
+    const full = new Image();
+    full.src = p.full; // …then swap in the 2160 × 2700 original when it has loaded
+    full.decode().then(() => lightbox.classList.contains('open') && (lightboxImg.src = p.full)).catch(() => {});
+    lightbox.classList.add('open');
+    lightbox.setAttribute('aria-hidden', 'false');
+    lenis.stop();
+  }
+  function closePhoto() {
+    if (!lightbox.classList.contains('open')) return;
+    lightbox.classList.remove('open');
+    lightbox.setAttribute('aria-hidden', 'true');
+    lenis.start();
+  }
+  lightbox.addEventListener('click', closePhoto);
+  window.addEventListener('keydown', (e) => e.key === 'Escape' && closePhoto());
   [
-    { src: photoLandscape, caption: 'Landscape' },
-    { src: photoPortrait, caption: 'Portrait' },
-    { src: photoNight, caption: 'Night' },
+    { src: photoLandscape, full: photoLandscapeFull, caption: 'Landscape' },
+    { src: photoPortrait, full: photoPortraitFull, caption: 'Portrait' },
+    { src: photoNight, full: photoNightFull, caption: 'Night' },
   ].forEach((p) => {
-    const d = document.createElement('div');
+    const d = document.createElement('button');
     d.className = 'photo';
-    d.innerHTML = `<img src="${p.src}" alt="${p.caption} sample photo" loading="eager" /><span>${p.caption}</span>`;
+    d.setAttribute('aria-label', `View ${p.caption} sample photo full screen`);
+    d.innerHTML = `<img src="${p.src}" alt="${p.caption} sample photo" decoding="async" /><span>${p.caption}</span>`;
+    d.addEventListener('click', () => openPhoto(p));
     photosEl.appendChild(d);
   });
 
@@ -374,6 +400,9 @@ async function init() {
   controls.enablePan = false;
   controls.rotateSpeed = 0.7;
   controls.zoomSpeed = 0.8;
+  // OrbitControls disables touch scrolling on the canvas when created — give it back:
+  // touch only belongs to the orbit while a part is being inspected
+  canvas.style.touchAction = '';
   let orbitTimer = null;
 
   function captureCamera() {
@@ -391,6 +420,7 @@ async function init() {
     controls.minDistance = d * 0.45;
     controls.maxDistance = d * 3;
     controls.enabled = true;
+    canvas.style.touchAction = 'none';
     controls.update();
     document.body.classList.add('orbiting');
   }
@@ -399,6 +429,7 @@ async function init() {
     if (inspect.orbiting) captureCamera();
     inspect.orbiting = false;
     controls.enabled = false;
+    canvas.style.touchAction = '';
     document.body.classList.remove('orbiting');
   }
   controls.addEventListener('start', () => document.body.classList.add('dragging'));
@@ -975,7 +1006,11 @@ async function init() {
 
   // ── reveal ──
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  gsap.to('#loader', { autoAlpha: 0, duration: 0.9, ease: 'power2.out', onComplete: () => $('#loader')?.remove() });
+  // the loader must never block taps / swipes: stop catching input immediately, always remove it
+  const loaderEl = $('#loader');
+  loaderEl.style.pointerEvents = 'none';
+  gsap.to(loaderEl, { autoAlpha: 0, duration: 0.9, ease: 'power2.out', onComplete: () => loaderEl.remove() });
+  setTimeout(() => loaderEl.isConnected && loaderEl.remove(), 1500);
   gsap.to(intro, { s: 1, y: 0, spin: 0, duration: 2.4, ease: 'expo.out' });
   gsap.from('.panel-intro .kicker, .panel-intro .lede, .panel-intro .cta-row', { opacity: 0, y: 20, stagger: 0.12, duration: 0.9, delay: 0.5, ease: 'power3.out' });
   setTimeout(() => {

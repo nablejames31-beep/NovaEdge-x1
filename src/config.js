@@ -147,10 +147,10 @@ export const SLIDES = [
 
 // ── Color finishes (back glass, frame, camera block) ─────────
 export const FINISHES = [
-  { id: 'pearl', name: 'Pearl Silver', back: '#d4d9df', frame: '#c3cad2', plateau: '#14161a', swatch: '#dfe3e8' },
-  { id: 'graphite', name: 'Graphite', back: '#2b2e34', frame: '#6c727b', plateau: '#0d0e10', swatch: '#3a3d43' },
-  { id: 'glacier', name: 'Glacier Blue', back: '#a9bfd6', frame: '#b8c6d4', plateau: '#121821', swatch: '#b4c8dd' },
-  { id: 'desert', name: 'Desert Titanium', back: '#cdb89f', frame: '#c4ac8f', plateau: '#17130f', swatch: '#d2bea6' },
+  { id: 'pearl', name: 'Pearl Silver', back: '#d4d9df', frame: '#c3cad2', plateau: '#14161a', logo: '#2a2d33', swatch: '#dfe3e8' },
+  { id: 'graphite', name: 'Graphite', back: '#2b2e34', frame: '#6c727b', plateau: '#0d0e10', logo: '#d4dae2', swatch: '#3a3d43' },
+  { id: 'glacier', name: 'Glacier Blue', back: '#a9bfd6', frame: '#b8c6d4', plateau: '#121821', logo: '#233350', swatch: '#b4c8dd' },
+  { id: 'desert', name: 'Desert Titanium', back: '#cdb89f', frame: '#c4ac8f', plateau: '#17130f', logo: '#3b2e22', swatch: '#d2bea6' },
 ];
 
 // ── Tech specs (fictional — edit freely) ─────────────────────

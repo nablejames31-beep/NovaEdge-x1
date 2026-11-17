@@ -142,7 +142,7 @@ export function buildPhone() {
     return l;
   }
 
-  const finishMats = { back: [], frame: [], plateau: [] };
+  const finishMats = { back: [], frame: [], plateau: [], logo: [] };
 
   // ── Materials (tuned for a real, premium product look) ──
   const titanium = () =>
@@ -260,6 +260,21 @@ export function buildPhone() {
     const logo = addMesh(p, new THREE.PlaneGeometry(0.7, 0.137), logoMat);
     logo.rotation.y = Math.PI;
     logo.position.set(0, -0.8, -GLASS_T / 2 - 0.0008);
+    // mirror-polished emblem in the middle of the back
+    const emblemMat = new THREE.MeshPhysicalMaterial({
+      color: '#2a2d33',
+      metalness: 1,
+      roughness: 0.08,
+      clearcoat: 1,
+      clearcoatRoughness: 0.02,
+      alphaMap: TX.emblemTexture(),
+      transparent: true,
+      depthWrite: false,
+    });
+    const emblem = addMesh(p, new THREE.PlaneGeometry(0.52, 0.52), emblemMat);
+    emblem.rotation.y = Math.PI;
+    emblem.position.set(0, 0.12, -GLASS_T / 2 - 0.0009);
+    finishMats.logo.push(emblemMat);
     addEdges(p, roundedOutline(gw, gh, gr, [-GLASS_T / 2 - 0.001, GLASS_T / 2]));
   }
 
@@ -491,6 +506,7 @@ export function buildPhone() {
     go(finishMats.back, f.back);
     go(finishMats.frame, f.frame);
     go(finishMats.plateau, f.plateau);
+    go(finishMats.logo, f.logo);
   }
 
   function partWorldPosition(id, target = tmp) {

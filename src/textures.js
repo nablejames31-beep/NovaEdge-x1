@@ -581,3 +581,45 @@ export function makePhotos() {
     { src: coast().toDataURL('image/jpeg', 0.88), caption: 'Daylight' },
   ];
 }
+
+// ── NovaEdge emblem (back of the phone) ──────────────────────
+// A four-point "nova" star inside a ring that is cut by one sharp "edge".
+// Drawn white-on-black so it can be used as an alpha map (shape) for a metal material.
+export function emblemPath(ctx, S) {
+  const c = S / 2;
+  // ring with a diagonal gap at the upper right
+  ctx.lineWidth = S * 0.045;
+  ctx.lineCap = 'butt';
+  ctx.beginPath();
+  ctx.arc(c, c, S * 0.4, -Math.PI * 0.12, -Math.PI * 0.38 + Math.PI * 2, false);
+  ctx.stroke();
+  // four-point star (long vertical points)
+  const star = (cx, cy, rx, ry, w) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - ry);
+    ctx.quadraticCurveTo(cx + w, cy - w, cx + rx, cy);
+    ctx.quadraticCurveTo(cx + w, cy + w, cx, cy + ry);
+    ctx.quadraticCurveTo(cx - w, cy + w, cx - rx, cy);
+    ctx.quadraticCurveTo(cx - w, cy - w, cx, cy - ry);
+    ctx.closePath();
+    ctx.fill();
+  };
+  star(c, c, S * 0.2, S * 0.3, S * 0.035);
+  // the "edge": a small spark sitting in the ring's gap
+  star(c + S * 0.31, c - S * 0.29, S * 0.045, S * 0.065, S * 0.01);
+}
+
+export function emblemTexture() {
+  const S = 1024;
+  const c = document.createElement('canvas');
+  c.width = c.height = S;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, S, S);
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#fff';
+  emblemPath(ctx, S);
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 8;
+  return t;
+}
