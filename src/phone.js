@@ -125,6 +125,8 @@ export function buildPhone() {
       if (!part.materials.includes(mm)) {
         mm.userData.baseOpacity = mm.opacity;
         mm.userData.baseTransparent = mm.transparent;
+        // compile once as transparent-capable so fading parts later never triggers a shader rebuild (= no stutter)
+        mm.transparent = true;
         part.materials.push(mm);
       }
     }
@@ -430,11 +432,6 @@ export function buildPhone() {
     part.opacity = o;
     for (const m of part.materials) {
       m.opacity = o * m.userData.baseOpacity;
-      const tr = m.userData.baseTransparent || o < 0.999;
-      if (m.transparent !== tr) {
-        m.transparent = tr;
-        m.needsUpdate = true;
-      }
       m.depthWrite = o > 0.6 && !m.userData.baseTransparent;
     }
   }

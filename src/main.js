@@ -72,7 +72,7 @@ function mountBackdrop() {
       reduceMotion ? 0 : 0.25,
       0,
       1,
-      1920 * 1080,
+      1280 * 720, // soft gradient: render small and let the browser upscale
     );
   } catch (e) {
     console.warn('Backdrop shader unavailable', e);
@@ -110,12 +110,14 @@ async function init() {
   ]).catch(() => {});
 
   // ── 3D ──
-  mountBackdrop();
+  const backdropMount = mountBackdrop();
   const canvas = $('#webgl');
   const stage = createStage(canvas);
   const phone = buildPhone();
   stage.pivot.add(phone.root);
   const effects = createEffects(phone);
+  // compile every shader up front so the first tap / scroll never stutters
+  stage.renderer.compile(stage.scene, stage.camera);
 
   // ── scroll-driven state (animated by the master timeline) ──
   const state = {
@@ -282,7 +284,8 @@ async function init() {
   const lenis = new Lenis({ lerp: reduceMotion ? 1 : SETTINGS.smoothness, wheelMultiplier: 0.85, touchMultiplier: 1.2, smoothWheel: true });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
-  gsap.ticker.lagSmoothing(0);
+  // if a frame ever hitches, continue the animation instead of jumping to its end
+  gsap.ticker.lagSmoothing(250, 33);
   lenis.stop();
 
   let lastW = 0;
@@ -631,7 +634,7 @@ async function init() {
         reduceMotion ? 0 : 0.35,
         0,
         1,
-        1400 * 1400,
+        900 * 900,
       );
     } catch (e) {
       console.warn('God rays unavailable', e);
@@ -727,6 +730,7 @@ async function init() {
   const marqueeTrack = $('.marquee-track');
   let marqueeSkew = 0;
   const phoneScreen = new THREE.Vector3();
+  let shadersRunning = true;
 
   const tooltip = $('#tooltip');
   const tooltipName = $('strong', tooltip);
@@ -892,7 +896,16 @@ async function init() {
     const rx = (phoneScreen.x * 0.5 + 0.5) * W;
     const ry = (-phoneScreen.y * 0.5 + 0.5) * H;
     raysEl.style.transform = `translate3d(${rx.toFixed(1)}px, ${ry.toFixed(1)}px, 0)`;
-    raysEl.style.opacity = (raysAt(tt) * calm).toFixed(3);
+    const raysO = raysAt(tt) * calm;
+    raysEl.style.opacity = raysO.toFixed(3);
+    // pause the background shaders while a part is inspected (frees the GPU for the fly-in)
+    const shadersOn = inspect.k < 0.02 && !reduceMotion;
+    if (shadersOn !== shadersRunning) {
+      shadersRunning = shadersOn;
+      backdropMount?.setSpeed(shadersOn ? 0.25 : 0);
+      raysMount?.setSpeed(shadersOn ? 0.35 : 0);
+    }
+    raysEl.style.visibility = raysO < 0.01 ? 'hidden' : 'visible';
 
     // aura blobs drift with scroll + time (depth)
     auraBlobs.forEach((b, k) => {

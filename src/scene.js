@@ -224,10 +224,11 @@ export function createStage(canvas) {
 
   let width = 1;
   let height = 1;
+  let quality = 1; // drops automatically on slower GPUs
   function setSize(w, h) {
     width = w;
     height = h;
-    const pr = Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : SETTINGS.maxPixelRatio);
+    const pr = Math.max(0.75, Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : SETTINGS.maxPixelRatio) * quality);
     renderer.setPixelRatio(pr);
     renderer.setSize(w, h, false);
     composer.setPixelRatio(pr);
@@ -303,7 +304,24 @@ export function createStage(canvas) {
     glow.scale.set(11 * s, 11 * s, 1);
   }
 
+  // adaptive quality: if frames are slow for a while, render at a lower resolution
+  let frameAvg = 16;
+  let lastFrame = performance.now();
+  let slowFor = 0;
   function render() {
+    const now = performance.now();
+    const dt = Math.min(200, now - lastFrame);
+    lastFrame = now;
+    frameAvg += (dt - frameAvg) * 0.05;
+    if (frameAvg > 26 && quality > 0.6) {
+      slowFor += dt;
+      if (slowFor > 1200) {
+        quality = Math.max(0.6, quality - 0.15);
+        slowFor = 0;
+        frameAvg = 16;
+        setSize(width, height);
+      }
+    } else slowFor = 0;
     composer.render();
   }
 
