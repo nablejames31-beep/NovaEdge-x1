@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 const TAU = Math.PI * 2;
 const CYAN = '#2EA8FF';
-const AMBER = '#FFB547';
+const AMBER = '#8FD3FF';
 const DISPLAY = "'Orbitron', 'Space Grotesk', sans-serif";
 const BODY = "'Space Grotesk', system-ui, sans-serif";
 
@@ -78,8 +78,8 @@ export function screenTexture() {
   ribbon('rgba(46,168,255,0.55)', 130, 60, a);
   ribbon('rgba(130,200,255,0.95)', 5, 1.5, a);
   ribbon('rgba(70,90,255,0.35)', 170, 70, b);
-  ribbon('rgba(255,181,71,0.40)', 60, 28, d);
-  ribbon('rgba(255,205,130,0.95)', 3, 1, d);
+  ribbon('rgba(143,211,255,0.40)', 60, 28, d);
+  ribbon('rgba(200,235,255,0.95)', 3, 1, d);
 
   // brand orb
   const cx = W / 2;
@@ -176,9 +176,9 @@ export function screenTexture() {
 export function logoTexture() {
   const [c, ctx] = makeCanvas(1024, 200);
   const g = ctx.createLinearGradient(0, 0, 1024, 0);
-  g.addColorStop(0, '#8e9aa8');
-  g.addColorStop(0.5, '#eef3f8');
-  g.addColorStop(1, '#8e9aa8');
+  g.addColorStop(0, '#3a4048');
+  g.addColorStop(0.5, '#7d8590');
+  g.addColorStop(1, '#3a4048');
   ctx.fillStyle = g;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -347,7 +347,7 @@ export function lensTexture() {
   ctx.beginPath();
   ctx.arc(m, m, m * 0.88, -0.5, 0.1);
   ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,181,71,0.6)';
+  ctx.strokeStyle = 'rgba(143,211,255,0.6)';
   ctx.beginPath();
   ctx.arc(m, m, m * 0.88, 2.6, 2.8);
   ctx.stroke();

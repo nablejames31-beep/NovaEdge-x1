@@ -13,10 +13,14 @@ import { SplitText } from 'gsap/SplitText';
 import Lenis from 'lenis';
 
 import { createStage } from './scene.js';
-import { buildPhone } from './phone.js';
+import { buildPhone, smoothstep } from './phone.js';
 import { createEffects } from './effects.js';
-import { makePhotos } from './textures.js';
 import { PARTS, SLIDES, SETTINGS, EXPLODED_POSE } from './config.js';
+
+// Real sample photos (Unsplash license, via picsum.photos)
+import photoLandscape from './assets/photos/p1015.jpg';
+import photoPortrait from './assets/photos/p1027.jpg';
+import photoNight from './assets/photos/p1022.jpg';
 
 gsap.registerPlugin(ScrollTrigger, SplitText);
 ScrollTrigger.config({ ignoreMobileResize: true });
@@ -91,36 +95,34 @@ async function init() {
     storFx: 0,
     glow: 0.3,
   };
-  // time-based effects (triggered when a slide is reached)
+  // time-based effects (triggered when a section is reached)
   const fx = { flash: 0, batteryFill: 0, lensSpin: 0 };
   const intro = { s: 0.55, y: -1.2, spin: -1.6 };
+  // tap-to-inspect camera fly-in
+  const inspect = {
+    k: 0,
+    id: null,
+    fresh: true,
+    want: { target: new THREE.Vector3(), dir: new THREE.Vector3(0, 0, 1), dist: 4 },
+    target: new THREE.Vector3(),
+    dir: new THREE.Vector3(0, 0, 1),
+    dist: 4,
+  };
 
-  // ── DOM: track, panels, dots, labels, legend, photos ──
+  // ── DOM ──
   const track = $('#track');
-  const panels = $$('.panel');
-  panels.forEach((p) => {
-    const inner = document.createElement('div');
-    inner.className = 'panel-inner';
-    while (p.firstChild) inner.appendChild(p.firstChild);
-    p.appendChild(inner);
-  });
-
-  const dotsEl = $('#dots');
-  const dots = SLIDES.map((s, i) => {
-    const b = document.createElement('button');
-    b.setAttribute('aria-label', `Go to slide ${i + 1}: ${s.nav}`);
-    b.innerHTML = `<span>${s.nav}</span>`;
-    b.addEventListener('click', () => goTo(i));
-    dotsEl.appendChild(b);
-    return b;
-  });
-  $('#counter-total').textContent = String(N).padStart(2, '0');
+  const sections = $$('.section');
+  const panels = sections.map((s) => $('.panel', s));
 
   const photosEl = $('#photos');
-  makePhotos().forEach((p) => {
+  [
+    { src: photoLandscape, caption: 'Landscape' },
+    { src: photoPortrait, caption: 'Portrait' },
+    { src: photoNight, caption: 'Night' },
+  ].forEach((p) => {
     const d = document.createElement('div');
     d.className = 'photo';
-    d.innerHTML = `<img src="${p.src}" alt="${p.caption} sample visual" /><span>${p.caption}</span>`;
+    d.innerHTML = `<img src="${p.src}" alt="${p.caption} sample photo" loading="eager" /><span>${p.caption}</span>`;
     photosEl.appendChild(d);
   });
 
@@ -164,135 +166,109 @@ async function init() {
     return { id, el, visible: false, anchor: new THREE.Vector3(...(cfg.labelAnchor || [0, 0, 0])) };
   });
 
-  // ── split titles into characters for the reveal animation ──
+  // split titles into characters for the reveal animation
   const splits = new Map();
   $$('.split').forEach((el) => {
-    const idx = +el.closest('.panel').dataset.slide;
+    const idx = +el.closest('.section').dataset.slide;
     const s = SplitText.create(el, { type: 'words,chars', wordsClass: 'word', charsClass: 'char' });
     splits.set(idx, s.chars);
   });
-
   gsap.set('.photo, .mt-app, #files li', { opacity: 0 });
 
-  // ── master timeline: time 0 … N-1, one unit per slide ──
+  // ── master timeline: time 0 … N-1, one unit per section ──
   const focusOf = (id) => phone.parts[id].base.clone().add(phone.parts[id].offset);
   const P = focusOf('processor');
   const C = focusOf('camera');
   const B = focusOf('battery');
   const S = focusOf('storage');
   const E = EXPLODED_POSE;
-  const ROT1 = TAU + 2.55; // after the first 360° — shows the back three-quarter view
+  const ROT1 = TAU + 2.55; // after the first 360° — back three-quarter view
   const ROT2 = 2 * TAU + E.rotY; // exploded pose
   const ROT3 = 3 * TAU + E.rotY; // reassembled — exactly one more full 360°
   const ROT4 = 3 * TAU; // facing the audience
 
-  const tl = gsap.timeline({ paused: true, defaults: { ease: 'power2.inOut' } });
+  const tl = gsap.timeline({ paused: true, defaults: { ease: 'sine.inOut' } });
   // 0 → 1 · 360° rotation
-  tl.to(state, { rotY: ROT1, rotX: 0.06, rotZ: 0, shift: 1, glow: 0.12, duration: 0.76 }, 0.12);
+  tl.to(state, { rotY: ROT1, rotX: 0.06, rotZ: 0, shift: 1, glow: 0.12, duration: 0.9 }, 0.05);
   // 1 → 2 · exploded view
-  tl.to(state, { rotY: ROT2, rotX: E.rotX, rotZ: E.rotZ, duration: 0.72 }, 1.1);
-  tl.to(state, { explode: 1, camFlip: 1, duration: 0.66, ease: 'power3.inOut' }, 1.22);
-  tl.to(state, { outlines: 1, duration: 0.3 }, 1.5);
-  tl.to(state, { labels: 1, duration: 0.14, ease: 'none' }, 1.74);
+  tl.to(state, { rotY: ROT2, rotX: E.rotX, rotZ: E.rotZ, duration: 0.85 }, 1.05);
+  tl.to(state, { explode: 1, camFlip: 1, duration: 0.8 }, 1.12);
+  tl.to(state, { outlines: 1, duration: 0.4 }, 1.4);
+  tl.to(state, { labels: 1, duration: 0.25 }, 1.65);
   // 2 → 3 · processor
-  tl.to(state, { labels: 0, duration: 0.12, ease: 'none' }, 2.12);
-  tl.to(state, { zoom: 1, fx: P.x, fy: P.y, fz: P.z, camYaw: 0.12, duration: 0.7 }, 2.15);
-  tl.to(state, { hlProcessor: 1, procFx: 1, duration: 0.35 }, 2.45);
+  tl.to(state, { labels: 0, duration: 0.2 }, 2.1);
+  tl.to(state, { zoom: 1, fx: P.x, fy: P.y, fz: P.z, camYaw: 0.12, duration: 0.85 }, 2.08);
+  tl.to(state, { hlProcessor: 1, procFx: 1, duration: 0.45 }, 2.4);
   // 3 → 4 · camera
-  tl.to(state, { hlProcessor: 0, procFx: 0, duration: 0.25 }, 3.12);
-  tl.to(state, { fx: C.x, fy: C.y, fz: C.z, camYaw: -0.12, duration: 0.7 }, 3.15);
-  tl.to(state, { hlCamera: 1, duration: 0.35 }, 3.45);
+  tl.to(state, { hlProcessor: 0, procFx: 0, duration: 0.35 }, 3.08);
+  tl.to(state, { fx: C.x, fy: C.y, fz: C.z, camYaw: -0.12, duration: 0.85 }, 3.08);
+  tl.to(state, { hlCamera: 1, duration: 0.45 }, 3.4);
   // 4 → 5 · battery
-  tl.to(state, { hlCamera: 0, duration: 0.25 }, 4.12);
-  tl.to(state, { fx: B.x, fy: B.y, fz: B.z, camYaw: 0.04, duration: 0.7 }, 4.15);
-  tl.to(state, { hlBattery: 1, battFx: 1, duration: 0.35 }, 4.45);
+  tl.to(state, { hlCamera: 0, duration: 0.35 }, 4.08);
+  tl.to(state, { fx: B.x, fy: B.y, fz: B.z, camYaw: 0.04, duration: 0.85 }, 4.08);
+  tl.to(state, { hlBattery: 1, battFx: 1, duration: 0.45 }, 4.4);
   // 5 → 6 · storage
-  tl.to(state, { hlBattery: 0, battFx: 0, duration: 0.25 }, 5.12);
-  tl.to(state, { fx: S.x, fy: S.y, fz: S.z, camYaw: 0.16, duration: 0.7 }, 5.15);
-  tl.to(state, { hlStorage: 1, storFx: 1, duration: 0.4 }, 5.45);
+  tl.to(state, { hlBattery: 0, battFx: 0, duration: 0.35 }, 5.08);
+  tl.to(state, { fx: S.x, fy: S.y, fz: S.z, camYaw: 0.16, duration: 0.85 }, 5.08);
+  tl.to(state, { hlStorage: 1, storFx: 1, duration: 0.45 }, 5.4);
   // 6 → 7 · reassemble + another 360°
-  tl.to(state, { hlStorage: 0, storFx: 0, duration: 0.2 }, 6.1);
-  tl.to(state, { zoom: 0, camYaw: 0, duration: 0.45 }, 6.12);
-  tl.to(state, { explode: 0, camFlip: 0, duration: 0.5, ease: 'power3.inOut' }, 6.2);
-  tl.to(state, { outlines: 0, duration: 0.3 }, 6.45);
-  tl.to(state, { rotY: ROT3, rotX: 0.08, rotZ: 0, posZ: -0.6, duration: 0.62 }, 6.3);
+  tl.to(state, { hlStorage: 0, storFx: 0, duration: 0.3 }, 6.05);
+  tl.to(state, { zoom: 0, camYaw: 0, duration: 0.55 }, 6.08);
+  tl.to(state, { explode: 0, camFlip: 0, duration: 0.6 }, 6.15);
+  tl.to(state, { outlines: 0, duration: 0.35 }, 6.45);
+  tl.to(state, { rotY: ROT3, rotX: 0.08, rotZ: 0, posZ: -0.6, duration: 0.8 }, 6.15);
   // 7 → 8 · final hero shot
-  tl.to(state, { rotY: ROT4, rotX: 0.02, shift: 0, lift: 1, posZ: 0.5, glow: 1, duration: 0.72, ease: 'power3.inOut' }, 7.14);
-
-  // text panels fade in/out around each slide
-  panels.forEach((el, i) => {
-    const inner = el.firstElementChild;
-    if (i > 0) {
-      tl.fromTo(el, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.2, ease: 'none' }, i - 0.3);
-      tl.fromTo(inner, { y: 50 }, { y: 0, duration: 0.24, ease: 'power2.out' }, i - 0.3);
-    }
-    if (i < N - 1) {
-      tl.to(el, { autoAlpha: 0, duration: 0.16, ease: 'none', immediateRender: false }, i + 0.12);
-      tl.to(inner, { y: -50, duration: 0.18, ease: 'power2.in', immediateRender: false }, i + 0.12);
-    }
-  });
+  tl.to(state, { rotY: ROT4, rotX: 0.02, shift: 0, lift: 1, posZ: 0.15, glow: 1, duration: 0.85 }, 7.08);
   tl.set({}, {}, N - 1);
-  gsap.set(panels[0], { autoAlpha: 1 });
 
-  // ── smooth scrolling ──
-  const lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.9, smoothWheel: true });
+  // ── smooth, free scrolling (no snapping) ──
+  const lenis = new Lenis({ lerp: SETTINGS.smoothness, wheelMultiplier: 0.85, touchMultiplier: 1.2, smoothWheel: true });
   lenis.on('scroll', ScrollTrigger.update);
   gsap.ticker.add((time) => lenis.raf(time * 1000));
   gsap.ticker.lagSmoothing(0);
   lenis.stop();
 
-  function layout() {
+  let lastW = 0;
+  let lastH = 0;
+  let unit = 1; // scroll distance between two sections, in px
+  function layout(force) {
     const w = window.innerWidth;
     const h = window.innerHeight;
     stage.setSize(w, h);
-    track.style.height = `${N * h}px`;
+    // on phones the address bar changes the height while scrolling; ignore small changes
+    if (!force && w === lastW && Math.abs(h - lastH) < 140) return false;
+    lastW = w;
+    lastH = h;
+    const gap = Math.round(h * SETTINGS.sectionGap);
+    unit = h + gap;
+    track.style.setProperty('--gap', `${gap}px`);
+    sections.forEach((s) => (s.style.height = `${h}px`));
+    return true;
   }
-  layout();
+  layout(true);
 
   ScrollTrigger.create({ trigger: track, start: 'top top', end: 'bottom bottom', animation: tl, scrub: true });
 
-  // ── navigation (keys, dots, buttons, snapping) ──
-  let settled = 0;
+  // keyboard / buttons glide smoothly to a section (handy when presenting)
   let navigating = false;
   let navTarget = 0;
-  let snapTimer = 0;
-  const scrollPos = () => lenis.scroll / window.innerHeight;
-
+  const scrollPos = () => lenis.scroll / unit;
   function goTo(i) {
     i = clamp(i, 0, N - 1);
     const now = scrollPos();
     const dist = Math.abs(i - now);
     if (dist < 0.002) return;
     const idx = i > now ? i : Math.min(N - 1, i + 1);
-    const duration = dist <= 1.001 ? SLIDES[idx].duration * clamp(dist, 0.35, 1) : Math.min(4.5, 1.4 + dist * 0.45);
+    const duration = dist <= 1.001 ? SLIDES[idx].duration * clamp(dist, 0.4, 1) : Math.min(5, 1.6 + dist * 0.5);
     navigating = true;
     navTarget = i;
-    lenis.scrollTo(i * window.innerHeight, {
+    lenis.scrollTo(i * unit, {
       duration,
       easing: easeInOutCubic,
-      lock: true,
       force: true,
-      onComplete: () => {
-        navigating = false;
-        settled = i;
-      },
+      onComplete: () => (navigating = false),
     });
   }
-
-  lenis.on('scroll', () => {
-    if (!SETTINGS.snapToSlides || navigating) return;
-    clearTimeout(snapTimer);
-    snapTimer = setTimeout(() => {
-      if (navigating) return;
-      const t = scrollPos();
-      const r = Math.round(t);
-      if (Math.abs(t - r) < 0.004) {
-        settled = r;
-        return;
-      }
-      goTo(t > settled ? Math.ceil(t - 0.15) : Math.floor(t + 0.15));
-    }, 160);
-  });
 
   window.addEventListener('keydown', (e) => {
     if (e.target.closest && e.target.closest('input, textarea')) return;
@@ -300,9 +276,11 @@ async function init() {
     const k = e.key;
     if (['ArrowRight', 'ArrowDown', 'PageDown', ' '].includes(k)) {
       e.preventDefault();
+      closeInfo();
       goTo(base + 1);
     } else if (['ArrowLeft', 'ArrowUp', 'PageUp'].includes(k)) {
       e.preventDefault();
+      closeInfo();
       goTo(base - 1);
     } else if (k === 'Home') {
       e.preventDefault();
@@ -325,31 +303,55 @@ async function init() {
   }
   $('#btn-fullscreen').addEventListener('click', toggleFullscreen);
 
-  // ── info panel ──
+  // ── tap a part → camera flies in + "what it is" panel ──
   const infoEl = $('#info');
   const partOrder = Object.keys(PARTS);
   let selected = null;
   function openInfo(id) {
     const c = PARTS[id];
+    if (!inspect.id || inspect.k < 0.02) inspect.fresh = true;
     selected = id;
+    inspect.id = id;
     $('.info-kicker', infoEl).textContent = c.kicker;
     $('.info-title', infoEl).textContent = c.name;
+    $('.info-def p', infoEl).textContent = c.definition;
     $('.info-desc', infoEl).textContent = c.description;
     $('.info-list', infoEl).innerHTML = c.highlights.map((h) => `<li>${h}</li>`).join('');
     infoEl.classList.add('open');
     infoEl.setAttribute('aria-hidden', 'false');
-    gsap.fromTo($$('.info-title, .info-desc, .info-list li', infoEl), { opacity: 0, y: 14 }, { opacity: 1, y: 0, stagger: 0.05, duration: 0.45, ease: 'power2.out', delay: 0.1 });
+    document.body.classList.add('inspecting');
+    gsap.fromTo(
+      $$('.info-title, .info-def, .info-desc, .info-list li', infoEl),
+      { opacity: 0, y: 14 },
+      { opacity: 1, y: 0, stagger: 0.05, duration: 0.5, ease: 'power2.out', delay: 0.15, overwrite: true },
+    );
     $$('button', legendEl).forEach((b, i) => b.classList.toggle('active', labelParts[i] === id));
+    gsap.to(inspect, { k: 1, duration: 1.6, ease: 'power3.inOut', overwrite: true });
   }
   function closeInfo() {
+    if (!selected) return;
     selected = null;
     infoEl.classList.remove('open');
     infoEl.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('inspecting');
     $$('button', legendEl).forEach((b) => b.classList.remove('active'));
+    gsap.to(inspect, {
+      k: 0,
+      duration: 1.3,
+      ease: 'power3.inOut',
+      overwrite: true,
+      onComplete: () => {
+        if (!selected) inspect.id = null;
+      },
+    });
   }
   $('.info-close', infoEl).addEventListener('click', closeInfo);
   $('#info-next').addEventListener('click', () => openInfo(partOrder[(partOrder.indexOf(selected) + 1) % partOrder.length]));
   $('#info-prev').addEventListener('click', () => openInfo(partOrder[(partOrder.indexOf(selected) - 1 + partOrder.length) % partOrder.length]));
+  // scrolling away zooms back out
+  lenis.on('scroll', (e) => {
+    if (selected && !navigating && Math.abs(e.velocity) > 2) closeInfo();
+  });
 
   // ── pointer: parallax, hover, click ──
   const pointer = { x: 0, y: 0, nx: 0, ny: 0, onCanvas: false, mouse: false };
@@ -382,8 +384,8 @@ async function init() {
   canvas.addEventListener('click', (e) => {
     if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) > 8) return;
     const id = pick(e.clientX, e.clientY);
-    if (id) openInfo(id);
-    else closeInfo();
+    if (id && id !== selected) openInfo(id);
+    else if (!id) closeInfo();
   });
 
   const tooltip = $('#tooltip');
@@ -391,11 +393,11 @@ async function init() {
   const hoverW = Object.fromEntries(Object.keys(PARTS).map((k) => [k, 0]));
   let hovered = null;
 
-  // ── slide enter / leave moments ──
+  // ── section moments (play when a section reaches the middle of the screen) ──
   function onEnter(i) {
     const chars = splits.get(i);
     if (chars) {
-      gsap.fromTo(chars, { yPercent: 70, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.75, stagger: 0.016, ease: 'power3.out', overwrite: true });
+      gsap.fromTo(chars, { yPercent: 70, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.8, stagger: 0.014, ease: 'power3.out', overwrite: true });
     }
     const id = SLIDES[i].id;
     if (id === 'processor') {
@@ -420,39 +422,61 @@ async function init() {
   }
   function onLeave(i) {
     const id = SLIDES[i].id;
-    if (id === 'processor') gsap.to('.mt-app', { opacity: 0, duration: 0.3, overwrite: true });
+    if (id === 'processor') gsap.to('.mt-app', { opacity: 0, duration: 0.4, overwrite: true });
     if (id === 'camera') {
       gsap.to(fx, { lensSpin: 0, duration: 0.6 });
-      gsap.to('.photo', { opacity: 0, duration: 0.3, overwrite: true });
+      gsap.to('.photo', { opacity: 0, duration: 0.4, overwrite: true });
     }
     if (id === 'battery') {
-      gsap.to(fx, { batteryFill: 0, duration: 0.5, overwrite: true });
-      gsap.to('#battery-fill', { scaleX: 0, duration: 0.5, overwrite: true });
+      gsap.to(fx, { batteryFill: 0, duration: 0.6, overwrite: true });
+      gsap.to('#battery-fill', { scaleX: 0, duration: 0.6, overwrite: true });
     }
-    if (id === 'storage') gsap.to('#files li', { opacity: 0, duration: 0.3, overwrite: true });
+    if (id === 'storage') gsap.to('#files li', { opacity: 0, duration: 0.4, overwrite: true });
   }
 
   // ── render loop ──
   const t0 = performance.now();
   const focusWorld = new THREE.Vector3();
   const v = new THREE.Vector3();
-  const progressBar = $('#progress span');
-  const counter = $('#counter-current');
-  let uiSlide = -1;
+  const q = new THREE.Quaternion();
   let activeSlide = -1;
   let ready = false;
+
+  function updateInspect() {
+    if (!inspect.id) return;
+    const p = phone.parts[inspect.id];
+    const cfg = PARTS[inspect.id].inspect;
+    const host = p.inner || p.group;
+    inspect.want.target.set(...cfg.offset);
+    host.localToWorld(inspect.want.target);
+    host.getWorldQuaternion(q);
+    inspect.want.dir.set(...cfg.face).normalize().applyQuaternion(q);
+    inspect.want.dist = cfg.dist;
+    if (inspect.fresh) {
+      inspect.target.copy(inspect.want.target);
+      inspect.dir.copy(inspect.want.dir);
+      inspect.dist = inspect.want.dist;
+      inspect.fresh = false;
+    } else {
+      // glide smoothly between parts when using Previous / Next
+      inspect.target.lerp(inspect.want.target, 0.06);
+      inspect.dir.lerp(inspect.want.dir, 0.06).normalize();
+      inspect.dist += (inspect.want.dist - inspect.dist) * 0.06;
+    }
+  }
 
   function tick() {
     const t = (performance.now() - t0) / 1000;
     const W = window.innerWidth;
     const H = window.innerHeight;
+    const calm = 1 - inspect.k;
 
     phone.root.rotation.set(state.rotX, state.rotY, state.rotZ);
     phone.root.position.set(0, state.posY, state.posZ);
-    par.x += (pointer.nx - par.x) * 0.04;
-    par.y += (pointer.ny - par.y) * 0.04;
-    stage.pivot.position.y = Math.sin(t * 0.9) * 0.06 + intro.y;
-    stage.pivot.rotation.set(-par.y * 0.05 + Math.sin(t * 0.6) * 0.015, par.x * 0.09 + intro.spin, Math.sin(t * 0.5) * 0.01);
+    par.x += (pointer.nx * calm - par.x) * 0.04;
+    par.y += (pointer.ny * calm - par.y) * 0.04;
+    stage.pivot.position.y = Math.sin(t * 0.9) * 0.06 * calm + intro.y;
+    stage.pivot.rotation.set(-par.y * 0.05 + Math.sin(t * 0.6) * 0.015 * calm, par.x * 0.09 + intro.spin, Math.sin(t * 0.5) * 0.01 * calm);
     stage.pivot.scale.setScalar(intro.s);
 
     for (const id in hoverW) {
@@ -460,12 +484,13 @@ async function init() {
       hoverW[id] += (target - hoverW[id]) * 0.16;
     }
 
-    phone.update(state, fx, t, hoverW);
+    phone.update(state, fx, t, hoverW, inspect);
     effects.update(state, fx, t);
     stage.scene.updateMatrixWorld();
     focusWorld.set(state.fx, state.fy, state.fz);
     phone.root.localToWorld(focusWorld);
-    stage.updateCamera(state, focusWorld, t);
+    updateInspect();
+    stage.updateCamera(state, focusWorld, t, inspect);
     stage.camera.updateMatrixWorld();
 
     // hover (mouse only)
@@ -473,10 +498,20 @@ async function init() {
     if (nextHover !== hovered) {
       hovered = nextHover;
       document.body.classList.toggle('hovering', !!hovered);
-      tooltip.classList.toggle('show', !!hovered);
+      tooltip.classList.toggle('show', !!hovered && hovered !== selected);
       if (hovered) tooltipName.textContent = PARTS[hovered].name;
     }
     if (hovered) tooltip.style.transform = `translate(${pointer.x + 18}px, ${pointer.y + 18}px)`;
+
+    const tt = tl.time();
+
+    // text fades in as it scrolls into view and out as it leaves
+    panels.forEach((el, i) => {
+      const d = Math.abs(tt - i);
+      const o = (1 - smoothstep(0.22, 0.5, d)) * calm;
+      el.style.opacity = o.toFixed(3);
+      el.style.visibility = o < 0.01 ? 'hidden' : 'visible';
+    });
 
     // floating labels
     const focusW = { processor: state.hlProcessor, camera: state.hlCamera, battery: state.hlBattery, storage: state.hlStorage };
@@ -484,7 +519,7 @@ async function init() {
       v.copy(L.anchor);
       phone.parts[L.id].group.localToWorld(v);
       v.project(stage.camera);
-      const o = v.z < 1 ? Math.max(state.labels, focusW[L.id] || 0) : 0;
+      const o = v.z < 1 ? Math.max(state.labels, focusW[L.id] || 0) * calm : 0;
       L.el.style.opacity = o.toFixed(3);
       L.el.style.transform = `translate(${((v.x * 0.5 + 0.5) * W).toFixed(1)}px, ${((-v.y * 0.5 + 0.5) * H).toFixed(1)}px)`;
       const vis = o > 0.3;
@@ -494,23 +529,15 @@ async function init() {
       }
     }
 
-    // progress, counter, slide moments
-    const limit = lenis.limit || 1;
-    progressBar.style.transform = `scaleX(${clamp(lenis.scroll / limit, 0, 1)})`;
-    const tt = tl.time();
-    const near = Math.round(tt);
-    if (near !== uiSlide) {
-      uiSlide = near;
-      counter.textContent = String(near + 1).padStart(2, '0');
-      dots.forEach((d, i) => d.classList.toggle('active', i === near));
-    }
+    // section moments
     if (ready) {
-      const hold = Math.abs(tt - near) < 0.14;
-      if (hold && near !== activeSlide) {
+      const near = Math.round(tt);
+      const inside = Math.abs(tt - near) < 0.3;
+      if (inside && near !== activeSlide) {
         if (activeSlide !== -1) onLeave(activeSlide);
         activeSlide = near;
         onEnter(near);
-      } else if (!hold && activeSlide !== -1) {
+      } else if (!inside && activeSlide !== -1) {
         onLeave(activeSlide);
         activeSlide = -1;
       }
@@ -521,23 +548,25 @@ async function init() {
   gsap.ticker.add(tick);
 
   window.addEventListener('resize', () => {
-    layout();
-    ScrollTrigger.refresh();
-    lenis.scrollTo(settled * window.innerHeight, { immediate: true, force: true });
+    const progress = lenis.scroll / unit;
+    if (layout(false)) {
+      ScrollTrigger.refresh();
+      lenis.scrollTo(progress * unit, { immediate: true, force: true });
+    }
   });
 
   // ── reveal ──
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   gsap.to('#loader', { autoAlpha: 0, duration: 0.9, ease: 'power2.out', onComplete: () => $('#loader')?.remove() });
   gsap.to(intro, { s: 1, y: 0, spin: 0, duration: 2.4, ease: 'expo.out' });
-  gsap.from('.panel-intro .kicker, .panel-intro .body, .panel-intro .scroll-hint', { opacity: 0, y: 20, stagger: 0.12, duration: 0.9, delay: 0.5, ease: 'power3.out' });
+  gsap.from('.panel-intro .kicker, .panel-intro .body', { opacity: 0, y: 20, stagger: 0.12, duration: 0.9, delay: 0.5, ease: 'power3.out' });
   setTimeout(() => {
     ready = true;
     lenis.start();
   }, 400);
 
   // handy for debugging / rehearsing: window.novaedge.goTo(4)
-  window.novaedge = { goTo, state, tl, lenis, phone, stage };
+  window.novaedge = { goTo, state, tl, lenis, phone, stage, openInfo, closeInfo, unit: () => unit };
 }
 
 init();

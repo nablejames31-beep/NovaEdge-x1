@@ -6,35 +6,32 @@ break apart into its parts, glow, and be explored by hovering or clicking.
 
 **Power Your Ambition, Connect Your Future.**
 
-## The flow (9 slides)
+## The flow
 
-| # | Slide | What happens |
-|---|-------|--------------|
-| 1 | Introduction | The phone rises into view |
-| 2 | 360° Design | Full rotation showing the front, edges and the triple camera |
-| 3 | Exploded View | The phone breaks apart into labelled, clickable components |
-| 4 | Processor | Zoom in, blue energy and circuit pulses, multitasking graphic |
-| 5 | Camera | Lenses turn, camera flash, sample photos fly in |
-| 6 | Battery | Charge glow sweeps up the battery and the battery icon fills |
-| 7 | Storage | Files, photos, videos and documents orbit the storage chip |
-| 8 | Reassembly | Parts snap back together, plus another 360° |
-| 9 | Final | Phone comes to center with a glowing halo: **NOVAEDGE X1** |
+One long, continuous page: as you scroll, the text glides by and the phone animates with it.
 
-## Presenting live
+| Section | What happens |
+|---------|--------------|
+| Introduction | The phone rises into view |
+| Design | Full 360° rotation: front, slim edges, titanium frame, triple camera |
+| Inside | The phone breaks apart into labelled components |
+| Processor | Camera moves in; blue energy and circuit pulses; multitasking graphic |
+| Camera | Lenses turn, the flash fires, real sample photos slide in |
+| Battery | A charge glow sweeps up the battery; the battery icon fills |
+| Storage | Files, photos, videos and documents orbit the storage chip |
+| Reassembly | Parts come back together, plus another 360° |
+| Final | Phone comes to center with a glowing halo: **NOVAEDGE X1** |
 
-| Key | Action |
-|-----|--------|
-| `→` `↓` `Space` `Page Down` | Next slide (presentation clickers work too) |
-| `←` `↑` `Page Up` | Previous slide |
-| `Home` / `End` | First / last slide |
-| `F` | Fullscreen |
-| `Esc` | Close the info panel |
-| Mouse wheel / trackpad | Free scroll; it glides to the nearest slide when you stop |
-| Hover a part | It glows and shows its name |
-| Click / tap a part | Opens the info panel for that component |
+## Interacting
 
-The dots on the right jump to any slide. The site also works on phones: the layout switches
-to the phone on top and the text at the bottom.
+- **Scroll** (mouse wheel, trackpad or swipe) to move through the page. It's free and smooth, with no snapping.
+- **Hover** a part and it glows and shows its name.
+- **Tap / click** a part (or a label / button) and the camera flies in on it, with a panel explaining
+  **what it is** and what it does. Use *Previous part / Next part* to fly between parts, or ✕, `Esc` or scrolling to zoom back out.
+- Presenting with a keyboard or clicker? `→` / `Space` / `Page Down` glide to the next section,
+  `←` / `Page Up` go back, `F` toggles fullscreen. These are optional; nothing on screen shows slide numbers.
+
+Live site: https://nablejames31-beep.github.io/NovaEdge-x1/
 
 ## Run it on your laptop
 
@@ -59,14 +56,16 @@ To make a production build (faster, smaller): `npm run build`, then `npm run pre
 
 Almost everything is in **`src/config.js`**:
 
-- `PALETTE`: the 60/30/10 colors (navy / cyan / amber)
+- `PALETTE`: the 60/30/10 colors (graphite black / pearl silver / electric cyan)
 - `PARTS`: each component's name, description, highlight bullets and
   - `explode`: how far it flies out when the phone breaks apart `[x, y, z]`
   - `delay`: the order parts move in (0 = first, 1 = last)
   - `labelDir` / `labelAnchor`: where its floating label sits
+  - `definition`: the plain-language "what it is" text shown when tapped
+  - `inspect`: where the camera flies to when the part is tapped (`dist` = how close)
 - `EXPLODED_POSE`: the angle of the phone while broken apart
-- `SLIDES`: slide names and how long each transition takes
-- `SETTINGS`: snapping, glow strength, quality
+- `SLIDES`: section names and keyboard glide durations
+- `SETTINGS`: `sectionGap` (page length / scroll speed), `smoothness`, glow strength, quality
 
 Slide text lives in `index.html`. The 3D model is in `src/phone.js`, the effects in `src/effects.js`,
 the lighting and background in `src/scene.js`, and the scroll timeline in `src/main.js`.
@@ -76,4 +75,5 @@ the lighting and background in `src/scene.js`, and the scroll timeline in `src/m
 [Vite](https://vitejs.dev) · [Three.js](https://threejs.org) (3D, bloom, reflections) ·
 [GSAP + ScrollTrigger + SplitText](https://gsap.com) (animation) · [Lenis](https://lenis.darkroom.engineering) (smooth scroll)
 
-> Note: no numerical specifications are stated anywhere in the presentation. The sample photos are illustrative.
+> No numerical specifications are stated anywhere. Sample photos by Alexey Topolyanskiy, Roksolana Zasiadko and
+> Vashishtha Jogi (Unsplash license, via picsum.photos).

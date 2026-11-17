@@ -6,10 +6,10 @@
 
 // 60 / 30 / 10 palette
 export const PALETTE = {
-  navy: '#05070F', // 60% — background
-  cyan: '#2EA8FF', // 30% — glows, outlines, energy
-  amber: '#FFB547', // 10% — single eye-catching accent
-  silver: '#C9D3DE', // neutral metal / text
+  navy: '#08090C', // 60% — graphite black background (neutral, so the phone pops)
+  silver: '#D9DEE4', // 30% — pearl silver: the phone body + text
+  cyan: '#2EA8FF', // 10% — electric cyan accent: glows, outlines, energy
+  amber: '#8FD3FF', // light cyan highlight (secondary tint of the accent)
 };
 
 // Phone body size in world units (proportions of a modern phone)
@@ -25,6 +25,8 @@ export const EXPLODED_POSE = { rotX: 0.12, rotY: 0.85, rotZ: -0.03 };
 //  label   : show a floating label in the exploded view
 //  labelDir: which way the label's leader line points (up / down / left / right)
 //  labelAnchor: point on the part (local coords) the label attaches to
+//  definition: plain-language "what it is" shown when you tap the part
+//  inspect : camera fly-in when tapped — face = direction to look from, dist = zoom distance
 export const PARTS = {
   screen: {
     name: 'Display',
@@ -34,6 +36,8 @@ export const PARTS = {
     label: true,
     labelDir: 'down',
     labelAnchor: [0, -1.62, 0],
+    definition: 'The display is the screen you see and touch. It shows everything — apps, photos and videos — and responds to your fingers.',
+    inspect: { face: [0.35, 0.12, 1], dist: 5.6, offset: [0, 0, 0] },
     description:
       'A vivid, immersive display that stretches nearly edge to edge — protected by a smooth, durable glass surface.',
     highlights: ['Edge-to-edge viewing', 'Rich, vibrant color', 'Smooth, responsive touch'],
@@ -46,6 +50,8 @@ export const PARTS = {
     label: true,
     labelDir: 'up',
     labelAnchor: [0, 0.23, 0.02],
+    definition: 'The processor (also called the chip) is the phone\'s brain. It runs every app, game and task you do, all at the same time.',
+    inspect: { face: [0.3, 0.25, 1], dist: 2.3, offset: [0, 0, 0] },
     description:
       'The powerful brain of NovaEdge X1. Built for fast performance and seamless multitasking across apps, games and work.',
     highlights: ['Fast, fluid performance', 'Seamless multitasking', 'Efficient by design'],
@@ -58,6 +64,8 @@ export const PARTS = {
     label: true,
     labelDir: 'down',
     labelAnchor: [0, -0.14, 0.02],
+    definition: 'Storage is where the phone keeps your things. It saves your photos, videos, apps and files — even when the phone is switched off.',
+    inspect: { face: [0.3, 0.2, 1], dist: 2.1, offset: [0, 0, 0] },
     description:
       'Generous storage keeps your photos, videos, apps and documents close at hand — with plenty of room for what matters.',
     highlights: ['Room for photos & videos', 'Apps, games & documents', 'Quick access to your files'],
@@ -68,6 +76,8 @@ export const PARTS = {
     explode: [0, 0, 0],
     delay: 0,
     label: false,
+    definition: 'The frame is the metal band around the edges. It holds every part together and gives the phone its strength and shape.',
+    inspect: { face: [1, 0.25, 0.55], dist: 3.6, offset: [0.6, 0.6, 0] },
     description: 'A slim, precision-crafted metal frame that gives NovaEdge X1 its elegant profile and solid feel in the hand.',
     highlights: ['Slim, elegant edges', 'Premium metal finish', 'Comfortable grip'],
   },
@@ -79,6 +89,8 @@ export const PARTS = {
     label: true,
     labelDir: 'down',
     labelAnchor: [0, -0.875, 0.035],
+    definition: 'The battery stores the energy that powers the phone. You recharge it, and it keeps everything running through your day.',
+    inspect: { face: [0.3, 0.2, 1], dist: 4.4, offset: [0, 0, 0] },
     description: 'A long-lasting battery designed for all-day performance — from your first alarm to your last message.',
     highlights: ['All-day battery performance', 'Built for long sessions', 'Efficient power use'],
   },
@@ -88,6 +100,8 @@ export const PARTS = {
     explode: [0, 0, -1.8],
     delay: 0.5,
     label: false,
+    definition: 'The back glass is the phone\'s rear cover. It protects everything inside and gives NovaEdge X1 its finished, premium look.',
+    inspect: { face: [0.3, 0.15, -1], dist: 5.8, offset: [0, 0, 0] },
     description: 'A polished glass back in deep space navy with a premium, reflective finish.',
     highlights: ['Polished glass finish', 'Deep space navy tone', 'Signature design'],
   },
@@ -99,6 +113,8 @@ export const PARTS = {
     label: true,
     labelDir: 'up',
     labelAnchor: [0, 0.34, 0],
+    definition: 'The camera system is the set of lenses and sensors that take your photos and videos. Each lens sees the world a little differently.',
+    inspect: { face: [0.3, 0.25, -1], dist: 2.4, offset: [0, 0, 0] },
     description:
       'Three lenses work together to capture sharp detail, vibrant color and cinematic moments — day or night.',
     highlights: ['Triple-lens system', 'Detailed, vibrant photos', 'Built-in flash'],
@@ -106,8 +122,8 @@ export const PARTS = {
 };
 
 // ── Slides (order = presentation order) ──────────────────────
-//  duration = seconds the transition INTO this slide takes when
-//  you press → (longer for the 360° rotations so they feel cinematic)
+//  duration = seconds the glide INTO this section takes when you
+//  press → / ← on the keyboard while presenting
 export const SLIDES = [
   { id: 'intro', nav: 'Introduction', duration: 1.6 },
   { id: 'design', nav: '360° Design', duration: 3.0 },
@@ -121,7 +137,8 @@ export const SLIDES = [
 ];
 
 export const SETTINGS = {
-  snapToSlides: true, // after free scrolling, glide to the nearest slide
+  sectionGap: 0.35, // extra scroll (in screen heights) between sections — bigger = slower, longer page
+  smoothness: 0.07, // scroll smoothing (lower = silkier / more glide)
   maxPixelRatio: 1.75, // lower = faster on weak laptops
   bloomStrength: 0.8, // glow intensity
 };

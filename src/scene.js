@@ -24,12 +24,14 @@ function buildEnvironment(renderer) {
     m.lookAt(0, 0, 0);
     env.add(m);
   };
-  panel(9, 3, '#ffffff', 3.2, [0, 7, 2]); // top softbox
-  panel(1.4, 12, PALETTE.cyan, 5, [-7, 0, 1.5]); // left cyan strip
-  panel(1.4, 12, PALETTE.cyan, 3.5, [7, 0, -1.5]); // right cyan strip
-  panel(5, 1.6, PALETTE.silver, 1.1, [4.5, -4, 6]); // front fill (off-axis so screens stay crisp)
-  panel(6, 1.2, '#ffffff', 1.4, [0, -6, -3]); // floor bounce
-  panel(1.6, 5, PALETTE.amber, 0.7, [6, 2, 6]); // faint amber kicker
+  panel(9, 3, '#ffffff', 3.4, [0, 7, 2]); // top softbox
+  panel(1.2, 12, '#ffffff', 2.2, [-7, 0, 0.5]); // tall white strip → long highlights on the metal edges
+  panel(1.4, 12, PALETTE.cyan, 1.3, [-7, 0, -3]); // cool rim (left/back)
+  panel(1.4, 12, '#ffffff', 1.6, [7, 0, -1.5]); // neutral rim (right/back)
+  panel(3, 8, '#ffffff', 0.9, [5, 1, 4]); // soft side box → gradient across the back glass
+  panel(5, 1.6, PALETTE.silver, 1.0, [4.5, -4, 6]); // front fill (off-axis so screens stay crisp)
+  panel(6, 1.2, '#ffffff', 1.2, [0, -6, -3]); // floor bounce
+  panel(1.6, 5, PALETTE.amber, 0.45, [6, 2, 6]); // faint warm kicker
   const pmrem = new THREE.PMREMGenerator(renderer);
   const tex = pmrem.fromScene(env, 0.03).texture;
   pmrem.dispose();
@@ -50,8 +52,8 @@ function buildBackdrop() {
         void main(){
           vec2 p = (vUv - 0.5) * vec2(1.7, 1.0);
           float d = length(p);
-          vec3 col = mix(vec3(0.004,0.010,0.030), uNavy, smoothstep(0.0, 0.6, d));
-          col += uCyan * (0.012 + 0.03*uGlow) * exp(-d*d*14.0);
+          vec3 col = mix(vec3(0.016,0.018,0.022), uNavy, smoothstep(0.0, 0.6, d));
+          col += uCyan * (0.004 + 0.03*uGlow) * exp(-d*d*14.0);
           gl_FragColor = vec4(col, 1.0);
         }`,
       depthWrite: false,
@@ -97,7 +99,7 @@ function buildBackdrop() {
           float line = 1.0 - min(min(g.x, g.y), 1.0);
           float fade = exp(-length(vW.xz)*0.09);
           float pulse = 0.5 + 0.5*sin(length(vW.xz)*1.2 - uTime*1.5);
-          gl_FragColor = vec4(uCyan, line * fade * (0.035 + 0.035*pulse));
+          gl_FragColor = vec4(uCyan, line * fade * (0.022 + 0.025*pulse));
         }`,
       transparent: true,
       depthWrite: false,
@@ -126,14 +128,14 @@ export function createStage(canvas) {
   camera.position.set(0, 0.6, 10.5);
 
   // lights
-  scene.add(new THREE.AmbientLight('#8fb6ff', 0.15));
-  const key = new THREE.DirectionalLight('#ffffff', 1.6);
+  scene.add(new THREE.AmbientLight('#ffffff', 0.12));
+  const key = new THREE.DirectionalLight('#ffffff', 1.9);
   key.position.set(4, 6, 7);
   scene.add(key);
-  const rimL = new THREE.PointLight(PALETTE.cyan, 40, 0, 2);
+  const rimL = new THREE.PointLight(PALETTE.cyan, 14, 0, 2);
   rimL.position.set(-4.5, 2.5, -3);
   scene.add(rimL);
-  const rimR = new THREE.PointLight(PALETTE.cyan, 28, 0, 2);
+  const rimR = new THREE.PointLight('#cfe6ff', 10, 0, 2);
   rimR.position.set(4.5, -1.5, -2.5);
   scene.add(rimR);
   const under = new THREE.PointLight('#5aa9ff', 10, 0, 2);
@@ -192,7 +194,7 @@ export function createStage(canvas) {
   const rt = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: isMobile ? 2 : 4 });
   const composer = new EffectComposer(renderer, rt);
   composer.addPass(new RenderPass(scene, camera));
-  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), SETTINGS.bloomStrength, 0.55, 0.82);
+  const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), SETTINGS.bloomStrength, 0.55, 0.9);
   composer.addPass(bloom);
   composer.addPass(new OutputPass());
 
@@ -212,22 +214,43 @@ export function createStage(canvas) {
 
   const target = new THREE.Vector3();
   const origin = new THREE.Vector3(0, 0, 0);
+  const dir = new THREE.Vector3();
+  const tmpDir = new THREE.Vector3();
 
   // Camera rig: zooms toward a focus point, keeps the subject on the
   // right side of the screen (desktop) or in the top half (phones).
-  function updateCamera(state, focusWorld, t) {
+  // `inspect` (k = 0…1) flies the camera in on a tapped component.
+  function updateCamera(state, focusWorld, t, inspect) {
     const aspect = width / height;
     const portrait = aspect < 0.85;
     const fit = portrait ? clamp(0.56 / aspect, 1, 1.65) : aspect < 1.3 ? 1.15 : 1;
     const baseDist = lerp(10.5, portrait ? 17.5 : 11.6, state.explode) * fit;
     const closeDist = 6.2 * fit;
-    const dist = lerp(baseDist, closeDist, state.zoom);
+    let dist = lerp(baseDist, closeDist, state.zoom);
     target.copy(origin).lerp(focusWorld, state.zoom);
     const yaw = state.camYaw;
-    camera.position.set(target.x + Math.sin(yaw) * dist, target.y + dist * 0.055, target.z + Math.cos(yaw) * dist);
+    dir.set(Math.sin(yaw), 0.055, Math.cos(yaw)).normalize();
+
+    const k = inspect.k;
+    if (k > 0.0001) {
+      // blend direction on the sphere (lerp + normalize, nudged upward so it never flips through the phone)
+      tmpDir.copy(inspect.dir);
+      dir.lerp(tmpDir, k);
+      dir.y += Math.sin(k * Math.PI) * 0.35;
+      dir.normalize();
+      target.lerp(inspect.target, k);
+      dist = lerp(dist, inspect.dist * (portrait ? 1.9 : 1), k);
+    }
+    camera.position.copy(target).addScaledVector(dir, dist);
     camera.lookAt(target);
-    const xOff = portrait ? 0 : -state.shift * 0.2 * width;
-    const yOff = portrait ? (0.16 + state.lift * 0.04) * height : state.lift * 0.135 * height;
+
+    // keep the subject beside the text (desktop) or above it (phones);
+    // while inspecting, keep it beside / above the info panel instead
+    const panelW = Math.min(420, width * 0.92);
+    let xOff = portrait ? 0 : -state.shift * 0.2 * width;
+    let yOff = portrait ? (0.16 + state.lift * 0.04) * height : state.lift * 0.135 * height;
+    xOff = lerp(xOff, portrait ? 0 : panelW * 0.5, k);
+    yOff = lerp(yOff, portrait ? 0.3 * height : 0, k);
     camera.setViewOffset(width, height, xOff, yOff, width, height);
 
     // background life
@@ -236,7 +259,7 @@ export function createStage(canvas) {
     backdrop.floor.material.uniforms.uTime.value = t;
     backdrop.wall.material.uniforms.uGlow.value = state.glow;
     glow.material.opacity = state.glow * 0.28;
-    const ringVis = state.glow * 0.9 * (1 - state.zoom) * (1 - 0.6 * state.explode);
+    const ringVis = state.glow * 0.9 * (1 - state.zoom) * (1 - 0.6 * state.explode) * (1 - k);
     halo.material.opacity = ringVis;
     halo2.material.opacity = ringVis;
     halo.rotation.z = t * 0.1;
