@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#05070F" />
+    <meta name="description" content="NovaEdge X1 — Power Your Ambition, Connect Your Future. An interactive 3D product presentation." />
+    <title>NovaEdge X1 — Power Your Ambition</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2305070F'/%3E%3Crect x='22' y='10' width='20' height='44' rx='5' fill='none' stroke='%232EA8FF' stroke-width='3'/%3E%3Ccircle cx='32' cy='46' r='3' fill='%23FFB547'/%3E%3C/svg%3E"
+    />
+  </head>
+  <body>
+    <canvas id="webgl" aria-label="Interactive 3D model of the NovaEdge X1 smartphone"></canvas>
+
+    <!-- floating component labels (exploded view) -->
+    <div id="labels" aria-hidden="true"></div>
+
+    <!-- presenter chrome -->
+    <header class="chrome">
+      <div class="brand"><span class="brand-mark"></span>NOVAEDGE</div>
+      <div class="chrome-right">
+        <div class="counter"><span id="counter-current">01</span><span class="sep">/</span><span id="counter-total">09</span></div>
+        <button id="btn-fullscreen" class="icon-btn" title="Fullscreen (F)" aria-label="Toggle fullscreen">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+          </svg>
+        </button>
+      </div>
+    </header>
+    <nav id="dots" aria-label="Slides"></nav>
+    <div id="progress"><span></span></div>
+    <div class="keys-hint"><kbd>←</kbd><kbd>→</kbd> navigate · <kbd>F</kbd> fullscreen · click parts to explore</div>
+    <div id="mobile-fade"></div>
+
+    <!-- slide panels -->
+    <div id="panels">
+      <section class="panel panel-intro" data-slide="0">
+        <p class="kicker">Introducing</p>
+        <h1 class="title brand-title split">NovaEdge X1</h1>
+        <p class="body">A new generation of smartphone — crafted for people who move fast and think big.</p>
+        <button class="scroll-hint" data-goto="1"><span class="mouse"><span></span></span>Scroll or press → to begin</button>
+      </section>
+
+      <section class="panel" data-slide="1">
+        <p class="kicker"><span>01</span> Design</p>
+        <h2 class="title split">Elegant from every angle.</h2>
+        <p class="body">
+          Slim edges, a precision-crafted metal frame and a signature triple-camera design. NovaEdge X1 is made to look as remarkable
+          as it performs.
+        </p>
+        <ul class="chips">
+          <li>Slim profile</li>
+          <li>Precision frame</li>
+          <li>Triple camera</li>
+        </ul>
+        <p class="hint">Tip: hover the phone and click any part to learn more.</p>
+      </section>
+
+      <section class="panel" data-slide="2">
+        <p class="kicker"><span>02</span> Inside</p>
+        <h2 class="title split">Engineered layer by layer.</h2>
+        <p class="body">Every component has its place. Explore the parts that power NovaEdge X1.</p>
+        <div class="legend" id="legend"></div>
+        <p class="hint">Hover or tap any component for details.</p>
+      </section>
+
+      <section class="panel" data-slide="3">
+        <p class="kicker"><span>03</span> Performance</p>
+        <h2 class="title split">A powerful processor at its core.</h2>
+        <p class="body">Built for fast performance and seamless multitasking — switch between apps, games and work without missing a beat.</p>
+        <div class="widget multitask" id="multitask">
+          <div class="mt-grid">
+            <div class="mt-app"><i></i>Video</div>
+            <div class="mt-app"><i></i>Music</div>
+            <div class="mt-app"><i></i>Maps</div>
+            <div class="mt-app"><i></i>Chat</div>
+            <div class="mt-app"><i></i>Games</div>
+            <div class="mt-app"><i></i>Work</div>
+          </div>
+          <div class="mt-meter"><span>Seamless multitasking</span><div class="mt-bar"><b></b></div></div>
+        </div>
+      </section>
+
+      <section class="panel" data-slide="4">
+        <p class="kicker"><span>04</span> Camera</p>
+        <h2 class="title split">A triple-camera system for every shot.</h2>
+        <p class="body">Three lenses work together to capture sharp detail, vibrant color and cinematic moments — day or night.</p>
+        <div class="widget photos" id="photos"></div>
+        <p class="hint small">Illustrative sample visuals.</p>
+      </section>
+
+      <section class="panel" data-slide="5">
+        <p class="kicker"><span>05</span> Battery</p>
+        <h2 class="title split">Power that lasts all day.</h2>
+        <p class="body">A long-lasting battery designed to keep up with your day — from your first alarm to your last message.</p>
+        <div class="widget battery-widget">
+          <div class="battery-icon"><div class="battery-fill" id="battery-fill"></div><div class="battery-cap"></div></div>
+          <div class="battery-text"><strong>All-day</strong><span>battery performance</span></div>
+        </div>
+      </section>
+
+      <section class="panel" data-slide="6">
+        <p class="kicker"><span>06</span> Storage</p>
+        <h2 class="title split">Generous space for everything.</h2>
+        <p class="body">Keep your photos, videos, apps and documents close — with plenty of room for what matters most.</p>
+        <ul class="widget files" id="files">
+          <li><i class="f-photo"></i>Photos</li>
+          <li><i class="f-video"></i>Videos</li>
+          <li><i class="f-doc"></i>Documents</li>
+          <li><i class="f-music"></i>Music</li>
+          <li><i class="f-app"></i>Apps</li>
+        </ul>
+      </section>
+
+      <section class="panel" data-slide="7">
+        <p class="kicker"><span>07</span> Design</p>
+        <h2 class="title split">Every component. One seamless design.</h2>
+        <p class="body">Processor, camera, battery and storage come together in a sleek, modern form that feels as good as it looks.</p>
+      </section>
+
+      <section class="panel panel-center panel-final" data-slide="8">
+        <h2 class="final-title split">NOVAEDGE X1</h2>
+        <p class="tagline">Power Your Ambition, Connect Your Future.</p>
+        <div class="final-actions">
+          <button class="btn btn-primary" data-goto="2">Explore the components</button>
+          <button class="btn btn-ghost" data-goto="0">Replay</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="tooltip" role="tooltip"><strong></strong><span>Click for details</span></div>
+
+    <aside id="info" aria-hidden="true">
+      <button class="info-close icon-btn" aria-label="Close details">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+      <p class="kicker info-kicker"></p>
+      <h3 class="info-title"></h3>
+      <p class="info-desc"></p>
+      <ul class="info-list"></ul>
+      <div class="info-nav">
+        <button class="btn btn-ghost" id="info-prev">← Previous</button>
+        <button class="btn btn-ghost" id="info-next">Next →</button>
+      </div>
+    </aside>
+
+    <div id="flash"></div>
+
+    <div id="loader">
+      <div class="loader-inner">
+        <div class="loader-word">NOVAEDGE X1</div>
+        <div class="loader-bar"><span></span></div>
+      </div>
+    </div>
+
+    <div id="nowebgl" hidden>
+      <h1>NovaEdge X1</h1>
+      <p>This presentation needs WebGL. Please open it in an up-to-date Chrome, Edge, Safari or Firefox.</p>
+    </div>
+
+    <!-- scroll track: one screen-height per slide -->
+    <main id="track"></main>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

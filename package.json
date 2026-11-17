@@ -1,0 +1,33 @@
+{
+  "name": "novaedge-x1",
+  "version": "1.0.0",
+  "description": "NovaEdge X1 \u2014 interactive 3D scroll presentation",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nablejames31-beep/novaedge-x1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nablejames31-beep/novaedge-x1/issues"
+  },
+  "homepage": "https://github.com/nablejames31-beep/novaedge-x1#readme",
+  "dependencies": {
+    "@fontsource/orbitron": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "gsap": "^3.15.1",
+    "lenis": "^1.3.27",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^8.3.8"
+  },
+  "type": "module",
+  "private": true
+}
